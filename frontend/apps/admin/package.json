@@ -75,6 +75,7 @@
     "@types/nprogress": "catalog:dev",
     "@types/react": "catalog:dev",
     "@types/react-dom": "catalog:dev",
+    "fast-glob": "catalog:dev",
     "oxlint": "catalog:dev",
     "sass": "catalog:web",
     "tsx": "catalog:dev",
