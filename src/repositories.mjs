@@ -347,7 +347,8 @@ export function createRepositories(db) {
   /** 读取单封邮件的完整纯文本正文。 */
   function getMessage(id) {
     return db.prepare(`SELECT m.id, m.account_id AS accountId, m.address_id AS addressId,
-      m.subject, m.sender, m.code, m.preview, m.body_text AS bodyText, m.received_at AS receivedAt,
+      m.subject, m.sender, m.code, m.preview, m.body_text AS bodyText, m.body_html AS bodyHtml,
+      m.received_at AS receivedAt,
       h.email AS hiddenEmail FROM inbox_messages m LEFT JOIN hidden_addresses h ON h.id = m.address_id
       WHERE m.id = ?`).get(id);
   }
@@ -421,10 +422,10 @@ export function createRepositories(db) {
       ? db.prepare("SELECT id FROM hidden_addresses WHERE account_id = ? AND lower(email) = lower(?)").get(accountId, message.recipient)
       : null;
     return db.prepare(`INSERT OR IGNORE INTO inbox_messages
-      (id, account_id, address_id, message_uid, subject, sender, code, preview, body_text, received_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      (id, account_id, address_id, message_uid, subject, sender, code, preview, body_text, body_html, received_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(randomUUID(), accountId, address?.id || null, message.uid, message.subject || "", message.sender || "",
-        message.code || "", message.preview || "", message.bodyText || "", message.receivedAt || "",
+        message.code || "", message.preview || "", message.bodyText || "", message.bodyHtml || "", message.receivedAt || "",
         new Date().toISOString()).changes > 0;
   }
 

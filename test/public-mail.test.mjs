@@ -53,11 +53,15 @@ test("公开接口返回最新纯文本邮件，错误或撤销密钥统一返�
     const access = context.publicMailService.createAccess(context.address.id);
     context.repositories.insertMessage(context.address.accountId, { uid: "public:1", recipient: context.address.email,
       subject: "验证码", sender: "sender@example.com", code: "654321", preview: "最新邮件",
-      bodyText: "您的验证码是 654321", receivedAt: new Date().toISOString() });
+      bodyText: "您的验证码是 654321", bodyHtml: "<strong>您的验证码是 654321</strong>",
+      receivedAt: new Date().toISOString() });
     const path = new URL(access.apiUrl).pathname;
     const response = await request(context.app).get(path).expect(200);
     assert.equal(response.body.message.code, "654321");
     assert.equal(response.body.message.bodyText, "您的验证码是 654321");
+    assert.equal(response.body.message.bodyHtml, undefined);
+    const stored = context.repositories.getMessage(response.body.message.id);
+    assert.equal(stored.bodyHtml, "<strong>您的验证码是 654321</strong>");
     await request(context.app).get(path.replace(access.token, "wrong-token-value-that-is-long-enough-123456")).expect(404);
     context.publicMailService.revokeAccess(context.address.id);
     await request(context.app).get(path).expect(404);

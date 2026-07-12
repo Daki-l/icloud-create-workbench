@@ -48,6 +48,7 @@ declare global {
   const IconMdiKeyboardReturn: typeof import('~icons/mdi/keyboard-return.tsx').default
   const IconUilSearch: typeof import('~icons/uil/search.tsx').default
   const MailDrawer: typeof import('../components/MailDrawer').default
+  const MailHtmlPreview: typeof import('../components/MailHtmlPreview').default
   const SkyrocAvatar: typeof import('../components/SkyrocAvatar').default
   const Suspense: typeof import('react').Suspense
   const SystemLogo: typeof import('../components/SystemLogo').default

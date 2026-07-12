@@ -114,6 +114,7 @@ export function createDatabase(databasePath) {
       code TEXT,
       preview TEXT,
       body_text TEXT,
+      body_html TEXT,
       received_at TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY(address_id) REFERENCES hidden_addresses(id)
@@ -136,6 +137,9 @@ export function createDatabase(databasePath) {
   const messageColumns = db.pragma("table_info(inbox_messages)");
   if (!messageColumns.some(column => column.name === "account_id")) {
     db.exec("ALTER TABLE inbox_messages ADD COLUMN account_id TEXT REFERENCES icloud_accounts(id)");
+  }
+  if (!messageColumns.some(column => column.name === "body_html")) {
+    db.exec("ALTER TABLE inbox_messages ADD COLUMN body_html TEXT");
   }
   const configColumns = db.pragma("table_info(account_inbox_configs)");
   const inboxMigrations = [

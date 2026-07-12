@@ -33,6 +33,7 @@ function createTestApp() {
 test("健康检查无需登录且不返回配置", async () => {
   const response = await request(createTestApp()).get("/api/health").expect(200);
   assert.deepEqual(response.body, { ok: true, service: "icloud-create-workbench" });
+  assert.match(response.headers["content-security-policy"], /api\.iconify\.design/);
 });
 
 test("未登录时受保护 API 返回 401", async () => {

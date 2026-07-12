@@ -82,15 +82,18 @@ export function createInboxService({ config, repositories }) {
   async function saveMessage(accountId, mailbox, message) {
     const parsed = await simpleParser(message.source);
     const bodyText = String(parsed.text || "").slice(0, 100_000);
-    const searchable = `${parsed.headers?.get("delivered-to") || ""}\n${parsed.to?.text || ""}\n${bodyText}`;
+    const bodyHtml = typeof parsed.html === "string" ? parsed.html.slice(0, 300_000) : "";
+    const htmlText = bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const searchable = `${parsed.headers?.get("delivered-to") || ""}\n${parsed.to?.text || ""}\n${bodyText}\n${htmlText}`;
     return repositories.insertMessage(accountId, {
       uid: `${accountId}:${mailbox}:${message.uid}`,
       subject: parsed.subject || "",
       sender: parsed.from?.text || "",
       recipient: matchHiddenAddress(accountId, searchable),
-      code: extractCode(`${parsed.subject || ""}\n${bodyText}`),
-      preview: bodyText.replace(/\s+/g, " ").slice(0, 240),
+      code: extractCode(`${parsed.subject || ""}\n${bodyText}\n${htmlText}`),
+      preview: (bodyText || htmlText).replace(/\s+/g, " ").slice(0, 240),
       bodyText,
+      bodyHtml,
       receivedAt: (parsed.date || message.internalDate || new Date()).toISOString()
     });
   }

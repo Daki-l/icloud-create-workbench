@@ -48,6 +48,7 @@ export interface Address {
 
 export interface MailMessage {
   id: string;
+  bodyHtml?: string;
   bodyText?: string;
   code?: string;
   hiddenEmail?: string;

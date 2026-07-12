@@ -22,7 +22,10 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   const frontendDir = existsSync(join(skyrocDir, "index.html")) ? skyrocDir : legacyDir;
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
-  app.use(helmet({ contentSecurityPolicy: { directives: { "upgrade-insecure-requests": null } } }));
+  app.use(helmet({ contentSecurityPolicy: { directives: {
+    "connect-src": ["'self'", "https://api.iconify.design", "https://api.unisvg.com", "https://api.simplesvg.com"],
+    "upgrade-insecure-requests": null
+  } } }));
   app.use(express.json({ limit: "256kb" }));
   app.use(cookieParser());
   app.use(requireTrustedOrigin(config));

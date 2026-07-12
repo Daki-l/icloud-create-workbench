@@ -24,8 +24,10 @@ test("旧版 IMAP 配置表可先补字段再创建同步索引", () => {
 
   const migrated = createDatabase(databasePath);
   const columns = migrated.pragma("table_info(account_inbox_configs)").map(column => column.name);
+  const messageColumns = migrated.pragma("table_info(inbox_messages)").map(column => column.name);
   const indexes = migrated.pragma("index_list(account_inbox_configs)").map(index => index.name);
   assert.ok(columns.includes("next_sync_at"));
+  assert.ok(messageColumns.includes("body_html"));
   assert.ok(indexes.includes("idx_inbox_configs_due"));
   migrated.close();
   rmSync(directory, { recursive: true, force: true });
