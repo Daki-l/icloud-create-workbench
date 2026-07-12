@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Col, Form, Input, InputNumber, List, Modal, Progress, Row, Select, Space, Tag, Typography, message } from 'antd';
 import { createFileRoute } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { apiFetch } from '@/service/workbench';
 import type { Account, Campaign } from '@/types/workbench';
@@ -14,6 +14,7 @@ interface PrefixFormValues { labelPrefix: string }
 /** 渲染持续生产目标、停止继续控制和批次记录。 */
 const TasksPage = () => {
   const queryClient = useQueryClient();
+  const [now, setNow] = useState(Date.now());
   const [editingCampaign, setEditingCampaign] = useState<Campaign>();
   const [prefixForm] = Form.useForm<PrefixFormValues>();
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => apiFetch<{ accounts: Account[] }>('/api/icloud-accounts') });
@@ -27,6 +28,10 @@ const TasksPage = () => {
     mutationFn: (values: PrefixFormValues) => apiFetch(`/api/generation-campaigns/${editingCampaign?.id}`, { body: JSON.stringify(values), method: 'PATCH' }),
     onSuccess: async () => { message.success('标签前缀已更新，下一批开始生效'); setEditingCampaign(undefined); await queryClient.invalidateQueries({ queryKey: ['campaigns'] }); await queryClient.invalidateQueries({ queryKey: ['accounts'] }); }
   });
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   /** 停止或继续持续生产目标。 */
   async function changeStatus(id: string, action: 'resume' | 'stop') {
@@ -39,6 +44,21 @@ const TasksPage = () => {
   function editPrefix(campaign: Campaign) {
     setEditingCampaign(campaign);
     prefixForm.setFieldsValue({ labelPrefix: campaign.labelPrefix });
+  }
+
+  /** 格式化生产目标下一批执行时间和实时倒计时。 */
+  function nextRunText(campaign: Campaign) {
+    if (campaign.status === 'stopped') return '下一批：已停止';
+    if (campaign.status === 'completed') return '下一批：目标已完成';
+    if (!campaign.nextRunAt) return '下一批：等待调度';
+    const target = new Date(campaign.nextRunAt).getTime();
+    if (!Number.isFinite(target)) return '下一批：时间无效';
+    const remaining = Math.max(0, target - now);
+    const hours = Math.floor(remaining / 3_600_000);
+    const minutes = Math.floor(remaining % 3_600_000 / 60_000);
+    const seconds = Math.floor(remaining % 60_000 / 1000);
+    const countdown = hours > 0 ? `${hours}时${minutes}分${seconds}秒` : `${minutes}分${seconds}秒`;
+    return `下一批：${new Date(target).toLocaleString('zh-CN', { hour12: false })}（${remaining ? countdown : '即将执行'}）`;
   }
 
   return (
@@ -65,7 +85,14 @@ const TasksPage = () => {
                   ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button key="resume" onClick={() => changeStatus(item.id, 'resume')}>继续</Button>]
                   : [];
               return <List.Item actions={actions}>
-                <div className="w-full"><div className="flex justify-between"><strong>{item.appleIdMasked}</strong><Tag>{item.status}</Tag></div><Progress percent={percent} /><Typography.Text type="secondary">库存 {item.currentTotal}/{item.targetTotal} · 每批 {item.batchSize} · 前缀 {item.labelPrefix}</Typography.Text></div>
+                <div className="w-full">
+                  <div className="flex justify-between"><strong>{item.appleIdMasked}</strong><Tag>{item.status}</Tag></div>
+                  <Progress percent={percent} />
+                  <Space direction="vertical" size={2}>
+                    <Typography.Text type="secondary">库存 {item.currentTotal}/{item.targetTotal} · 每批 {item.batchSize} · 前缀 {item.labelPrefix}</Typography.Text>
+                    <Typography.Text type={item.status === 'running' ? 'warning' : 'secondary'}>{nextRunText(item)}</Typography.Text>
+                  </Space>
+                </div>
               </List.Item>;
             }} />
           </Card>
