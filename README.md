@@ -53,8 +53,7 @@ JSON 接口返回该隐私邮箱在本地数据库中的最新邮件；暂无邮
 ```bash
 npm install
 npm run init-env
-docker compose build
-docker compose up -d
+docker compose up -d --build
 docker compose ps
 ```
 
@@ -69,8 +68,7 @@ docker compose logs -f app
 更新服务：
 
 ```bash
-docker compose build --pull
-docker compose up -d
+docker compose up -d --build
 ```
 
 ## 数据备份
