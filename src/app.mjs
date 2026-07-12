@@ -46,6 +46,7 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   for (const directory of ["assets", "css", "js"]) {
     app.use(`/${directory}`, express.static(join(frontendDir, directory), { maxAge: "1h" }));
   }
+  app.get("/favicon.ico", (req, res) => res.sendFile(join(frontendDir, "favicon.ico")));
   app.get("/favicon.svg", (req, res) => res.sendFile(join(frontendDir, "favicon.svg")));
 
   /** 返回公开邮件或登录页面的 React 入口。 */

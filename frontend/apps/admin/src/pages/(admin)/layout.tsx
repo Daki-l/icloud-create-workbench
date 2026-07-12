@@ -27,7 +27,7 @@ const AdminLayout = () => {
       footer={<AdminFooter />}
       headerMiddleActions={<NotificationButton className="px-12px" />}
       headerRightActions={<UserAvatar />}
-      logo={<SystemLogo className="text-32px text-primary" />}
+      logo={<SystemLogo className="size-32px" />}
       logoTitle={t('system.title')}
     />
   );

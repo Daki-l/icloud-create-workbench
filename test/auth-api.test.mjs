@@ -35,6 +35,11 @@ test("健康检查无需登录且不返回配置", async () => {
   assert.match(response.headers["content-security-policy"], /api\.iconify\.design/);
 });
 
+test("浏览器标签图标和系统 Logo 可以由本地静态资源访问", async () => {
+  await request(createTestApp()).get("/favicon.ico").expect(200).expect("Content-Type", /image/);
+  await request(createTestApp()).get("/assets/icloud-logo.png").expect(200).expect("Content-Type", /image\/png/);
+});
+
 test("未登录时受保护 API 返回 401", async () => {
   await request(createTestApp()).get("/api/icloud-accounts").expect(401);
 });

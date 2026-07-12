@@ -4,6 +4,8 @@ import { Outlet, createFileRoute, redirect, useLocation } from '@tanstack/react-
 import { AnimatePresence, motion } from 'motion/react';
 import { z } from 'zod';
 
+import SystemLogo from '@/components/SystemLogo';
+
 const COLOR_WHITE = '#ffffff';
 
 const LoginSearchSchema = z.object({
@@ -26,6 +28,7 @@ const LoginLayout = () => {
       <ACard className="relative z-4 w-auto rd-8px" variant="borderless">
         <div className="w-400px lt-sm:w-300px">
           <div className="text-center">
+            <SystemLogo className="mx-auto mb-12px size-64px" />
             <h1 className="m-0 text-28px font-600 text-primary">{t('system.title')}</h1>
             <p className="m-0 mt-8px text-14px text-text-2">{t('page.login.common.loginOrRegister')}</p>
           </div>
