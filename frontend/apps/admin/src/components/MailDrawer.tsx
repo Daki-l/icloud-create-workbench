@@ -5,6 +5,7 @@ import { useState } from 'react';
 import MailHtmlPreview from '@/components/MailHtmlPreview';
 import { apiFetch, queryString } from '@/service/workbench';
 import type { MailMessage, Pagination as PageInfo } from '@/types/workbench';
+import { formatShanghaiTime } from '@/utils/time';
 
 interface MailDrawerProps {
   /** 当前隐私邮箱记录编号。 */
@@ -60,7 +61,7 @@ const MailDrawer = (props: MailDrawerProps) => {
         loading={listQuery.isLoading}
         renderItem={item => (
           <List.Item actions={[<Button key="detail" type="link" onClick={() => setSelectedId(item.id)}>查看详情</Button>]}>
-            <List.Item.Meta description={`${item.sender || '未知发件人'} · ${item.receivedAt || ''}`} title={item.subject || '无主题'} />
+            <List.Item.Meta description={`${item.sender || '未知发件人'} · ${formatShanghaiTime(item.receivedAt)}`} title={item.subject || '无主题'} />
             {item.code ? <Typography.Text copyable={{ text: item.code }}><Tag color="blue">{item.code}</Tag></Typography.Text> : null}
           </List.Item>
         )}
@@ -75,7 +76,7 @@ const MailDrawer = (props: MailDrawerProps) => {
               <Descriptions.Item label="验证码">
                 {message.code ? <Typography.Text copyable={{ text: message.code }} strong>{message.code}</Typography.Text> : '未识别'}
               </Descriptions.Item>
-              <Descriptions.Item label="收件时间">{message.receivedAt || '-'}</Descriptions.Item>
+              <Descriptions.Item label="收件时间">{formatShanghaiTime(message.receivedAt, '-')}</Descriptions.Item>
             </Descriptions>
             {message.bodyHtml ? <Segmented options={[{ label: 'HTML 邮件', value: 'html' }, { label: '纯文本', value: 'text' }]} value={viewMode} onChange={value => setViewMode(value as 'html' | 'text')} /> : null}
             {message.bodyHtml && viewMode === 'html'

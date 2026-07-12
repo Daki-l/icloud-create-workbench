@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { apiFetch } from '@/service/workbench';
 import type { Account, Campaign } from '@/types/workbench';
+import { formatShanghaiTime } from '@/utils/time';
 
 interface JobResult { email?: string; error?: string; label: string }
 interface Job { id: string; appleIdMasked: string; createdAt: string; requestedCount: number; results: JobResult[]; status: string }
@@ -58,7 +59,7 @@ const TasksPage = () => {
     const minutes = Math.floor(remaining % 3_600_000 / 60_000);
     const seconds = Math.floor(remaining % 60_000 / 1000);
     const countdown = hours > 0 ? `${hours}时${minutes}分${seconds}秒` : `${minutes}分${seconds}秒`;
-    return `下一批：${new Date(target).toLocaleString('zh-CN', { hour12: false })}（${remaining ? countdown : '即将执行'}）`;
+    return `下一批：${formatShanghaiTime(target)}（${remaining ? countdown : '即将执行'}）`;
   }
 
   return (
@@ -97,7 +98,7 @@ const TasksPage = () => {
             }} />
           </Card>
           <Card loading={jobs.isLoading} title="最近批次">
-            <List dataSource={jobs.data?.jobs || []} renderItem={job => <List.Item><List.Item.Meta title={`${job.appleIdMasked} · ${job.status}`} description={`${job.createdAt} · 请求 ${job.requestedCount} 个`} /><Space direction="vertical">{job.results.map(item => <Typography.Text key={item.label}>{item.label} · {item.email || item.error}</Typography.Text>)}</Space></List.Item>} />
+            <List dataSource={jobs.data?.jobs || []} renderItem={job => <List.Item><List.Item.Meta title={`${job.appleIdMasked} · ${job.status}`} description={`${formatShanghaiTime(job.createdAt)} · 请求 ${job.requestedCount} 个`} /><Space direction="vertical">{job.results.map(item => <Typography.Text key={item.label}>{item.label} · {item.email || item.error}</Typography.Text>)}</Space></List.Item>} />
           </Card>
         </Space>
       </Col>

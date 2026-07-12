@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 import { apiFetch, queryString } from '@/service/workbench';
 import type { Account, MailMessage, Pagination } from '@/types/workbench';
+import { formatShanghaiTime } from '@/utils/time';
 
 interface InboxConfig { configured: boolean; email?: string; host?: string; lastError?: string; lastSyncAt?: string; mailbox?: string; nextSyncAt?: string; port?: number; secure?: boolean }
 interface InboxFormValues { email: string; host: string; mailbox?: string; password?: string; port?: number; secure?: boolean }
@@ -48,15 +49,15 @@ const InboxPage = () => {
           </Col>
           <Col lg={10} xs={24}>
             <Card size="small" title="同步状态">
-              <Typography.Paragraph>最近同步：{config.data?.lastSyncAt || '尚未同步'}</Typography.Paragraph>
-              <Typography.Paragraph>下次同步：{config.data?.nextSyncAt || '-'}</Typography.Paragraph>
+              <Typography.Paragraph>最近同步：{formatShanghaiTime(config.data?.lastSyncAt, '尚未同步')}</Typography.Paragraph>
+              <Typography.Paragraph>下次同步：{formatShanghaiTime(config.data?.nextSyncAt, '-')}</Typography.Paragraph>
               {config.data?.lastError ? <Typography.Text type="danger">{config.data.lastError}</Typography.Text> : <Tag color="green">正常</Tag>}
             </Card>
           </Col>
         </Row>
       </Card>
       <Card loading={mails.isLoading} title="最近邮件">
-        <List dataSource={mails.data?.messages || []} renderItem={item => <List.Item><List.Item.Meta description={`${item.hiddenEmail || '未匹配隐私邮箱'} · ${item.receivedAt || ''}`} title={item.subject || '无主题'} />{item.code ? <Tag color="blue">{item.code}</Tag> : null}</List.Item>} />
+        <List dataSource={mails.data?.messages || []} renderItem={item => <List.Item><List.Item.Meta description={`${item.hiddenEmail || '未匹配隐私邮箱'} · ${formatShanghaiTime(item.receivedAt)}`} title={item.subject || '无主题'} />{item.code ? <Tag color="blue">{item.code}</Tag> : null}</List.Item>} />
       </Card>
     </Space>
   );

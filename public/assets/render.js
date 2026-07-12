@@ -6,7 +6,11 @@ export function escapeHtml(value) {
 /** 格式化日期时间。 */
 export function formatTime(value) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat("zh-CN", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "Asia/Shanghai"
+  }).format(new Date(value));
 }
 
 /** 计算冷却倒计时文本。 */

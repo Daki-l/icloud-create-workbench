@@ -49,7 +49,7 @@ function createConfig() {
   return {
     // ======System Config======
     /** - 是否自动检测更新 */
-    automaticallyDetectUpdate: true,
+    automaticallyDetectUpdate: false,
 
     /** - 是否开发环境 */
     isDev: import.meta.env.DEV,
