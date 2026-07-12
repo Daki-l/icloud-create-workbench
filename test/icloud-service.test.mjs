@@ -52,6 +52,18 @@ test("导入 CK 后只暴露脱敏账号信息", async () => {
   } finally { context.cleanup(); }
 });
 
+test("手动更新同账号 CK 时保留原账号和库存数据", async () => {
+  const context = createContext();
+  try {
+    const account = await context.service.importAccount("Cookie: old=value", "auto");
+    context.repositories.upsertAddresses(account.id, null, [{ email: "keep@icloud.com", label: "keep-001" }], "synced");
+    await context.service.updateCookie(account.id, "Cookie: renewed=value", "auto");
+    assert.equal(context.repositories.listAccounts().length, 1);
+    assert.equal(context.repositories.listAddresses({ accountId: account.id }).length, 1);
+    assert.equal(context.calls.at(-1).command, "validate");
+  } finally { context.cleanup(); }
+});
+
 test("批量生成成功后写入邮箱并强制冷却", async () => {
   const context = createContext();
   try {
