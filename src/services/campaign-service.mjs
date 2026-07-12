@@ -9,6 +9,15 @@ export function createCampaignService({ config, repositories, icloudService }) {
     return new Date(Math.max(Date.now(), Number.isFinite(cooldown) ? cooldown : 0)).toISOString();
   }
 
+  /** 校验并标准化标签前缀。 */
+  function normalizeLabelPrefix(value) {
+    const labelPrefix = String(value || "").trim();
+    if (!/^[A-Za-z0-9_-]{1,24}$/.test(labelPrefix)) {
+      throw Object.assign(new Error("标签前缀只能包含字母、数字、下划线和短横线，最长 24 位"), { status: 400 });
+    }
+    return labelPrefix;
+  }
+
   /** 创建一个默认目标为 700 的持续生产任务。 */
   function createCampaign(input) {
     const account = repositories.getAccountInternal(input.accountId);
@@ -18,15 +27,12 @@ export function createCampaignService({ config, repositories, icloudService }) {
     }
     const targetTotal = Number(input.targetTotal || config.targetDefault);
     const batchSize = Number(input.batchSize || config.batchLimit);
-    const labelPrefix = String(input.labelPrefix || account.label_prefix || "changsheng").trim();
+    const labelPrefix = normalizeLabelPrefix(input.labelPrefix || account.label_prefix || "changsheng");
     if (!Number.isInteger(targetTotal) || targetTotal < 1 || targetTotal > 700) {
       throw Object.assign(new Error("目标库存必须是 1-700 之间的整数"), { status: 400 });
     }
     if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > config.batchLimit) {
       throw Object.assign(new Error(`每批数量必须是 1-${config.batchLimit}`), { status: 400 });
-    }
-    if (!/^[A-Za-z0-9_-]{1,24}$/.test(labelPrefix)) {
-      throw Object.assign(new Error("标签前缀格式无效"), { status: 400 });
     }
     const currentTotal = repositories.countAddresses(input.accountId);
     if (currentTotal >= targetTotal) {
@@ -39,6 +45,15 @@ export function createCampaignService({ config, repositories, icloudService }) {
       labelPrefix,
       nextRunAt: nextAllowedTime(account)
     });
+  }
+
+  /** 修改当前生产目标后续批次使用的标签前缀。 */
+  function updateLabelPrefix(id, input) {
+    const labelPrefix = normalizeLabelPrefix(input.labelPrefix);
+    if (!repositories.updateCampaignLabelPrefix(id, labelPrefix)) {
+      throw Object.assign(new Error("运行中或已停止的生产目标不存在"), { status: 404 });
+    }
+    return { ok: true, labelPrefix };
   }
 
   /** 停止目标的后续自动批次。 */
@@ -110,6 +125,7 @@ export function createCampaignService({ config, repositories, icloudService }) {
 
   return {
     createCampaign,
+    updateLabelPrefix,
     stopCampaign,
     resumeCampaign,
     listCampaigns: limit => repositories.listCampaigns(limit),

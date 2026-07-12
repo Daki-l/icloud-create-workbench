@@ -241,6 +241,20 @@ export function createRepositories(db) {
       .run(nextRunAt, new Date().toISOString(), id).changes > 0;
   }
 
+  /** 更新未完成目标及所属 CK 的默认标签前缀。 */
+  function updateCampaignLabelPrefix(id, labelPrefix) {
+    return db.transaction(() => {
+      const campaign = db.prepare("SELECT account_id FROM generation_campaigns WHERE id = ? AND status IN ('running', 'stopped')").get(id);
+      if (!campaign) return false;
+      const now = new Date().toISOString();
+      db.prepare("UPDATE generation_campaigns SET label_prefix = ?, updated_at = ? WHERE id = ?")
+        .run(labelPrefix, now, id);
+      db.prepare("UPDATE icloud_accounts SET label_prefix = ?, updated_at = ? WHERE id = ?")
+        .run(labelPrefix, now, campaign.account_id);
+      return true;
+    })();
+  }
+
   /** 标记目标已达到库存总数。 */
   function completeCampaign(id) {
     db.prepare("UPDATE generation_campaigns SET status = 'completed', next_run_at = NULL, last_error = NULL, updated_at = ? WHERE id = ? AND status != 'stopped'")
@@ -466,7 +480,7 @@ export function createRepositories(db) {
     listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, deleteAccount, updateMaildomainHost,
     createJob, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
-    stopCampaign, resumeCampaign, completeCampaign, recordCampaignRun,
+    stopCampaign, resumeCampaign, updateCampaignLabelPrefix, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
     getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
     getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,

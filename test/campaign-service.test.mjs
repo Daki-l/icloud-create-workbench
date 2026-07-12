@@ -62,3 +62,14 @@ test("生产目标支持停止和继续", () => {
     assert.equal(context.service.listCampaigns(10)[0].status, "running");
   } finally { context.cleanup(); }
 });
+
+test("生产目标可修改后续批次标签前缀并同步 CK 默认值", () => {
+  const context = createContext();
+  try {
+    const campaign = context.service.createCampaign({ accountId: context.account.id, targetTotal: 10, labelPrefix: "old-prefix" });
+    const result = context.service.updateLabelPrefix(campaign.id, { labelPrefix: "new_prefix" });
+    assert.equal(result.labelPrefix, "new_prefix");
+    assert.equal(context.service.listCampaigns(10)[0].labelPrefix, "new_prefix");
+    assert.equal(context.repositories.getAccountInternal(context.account.id).label_prefix, "new_prefix");
+  } finally { context.cleanup(); }
+});

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Col, Form, Input, InputNumber, List, Progress, Row, Select, Space, Tag, Typography, message } from 'antd';
+import { Button, Card, Col, Form, Input, InputNumber, List, Modal, Progress, Row, Select, Space, Tag, Typography, message } from 'antd';
 import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { apiFetch } from '@/service/workbench';
 import type { Account, Campaign } from '@/types/workbench';
@@ -8,10 +9,13 @@ import type { Account, Campaign } from '@/types/workbench';
 interface JobResult { email?: string; error?: string; label: string }
 interface Job { id: string; appleIdMasked: string; createdAt: string; requestedCount: number; results: JobResult[]; status: string }
 interface CampaignFormValues { accountId: string; batchSize: number; labelPrefix: string; targetTotal: number }
+interface PrefixFormValues { labelPrefix: string }
 
 /** 渲染持续生产目标、停止继续控制和批次记录。 */
 const TasksPage = () => {
   const queryClient = useQueryClient();
+  const [editingCampaign, setEditingCampaign] = useState<Campaign>();
+  const [prefixForm] = Form.useForm<PrefixFormValues>();
   const accounts = useQuery({ queryKey: ['accounts'], queryFn: () => apiFetch<{ accounts: Account[] }>('/api/icloud-accounts') });
   const campaigns = useQuery({ queryKey: ['campaigns'], queryFn: () => apiFetch<{ campaigns: Campaign[] }>('/api/generation-campaigns'), refetchInterval: 30_000 });
   const jobs = useQuery({ queryKey: ['jobs'], queryFn: () => apiFetch<{ jobs: Job[] }>('/api/generation-jobs?page=1&pageSize=20'), refetchInterval: 30_000 });
@@ -19,12 +23,22 @@ const TasksPage = () => {
     mutationFn: (values: CampaignFormValues) => apiFetch('/api/generation-campaigns', { body: JSON.stringify(values), method: 'POST' }),
     onSuccess: async () => { message.success('生产目标已启动'); await queryClient.invalidateQueries(); }
   });
+  const prefixMutation = useMutation({
+    mutationFn: (values: PrefixFormValues) => apiFetch(`/api/generation-campaigns/${editingCampaign?.id}`, { body: JSON.stringify(values), method: 'PATCH' }),
+    onSuccess: async () => { message.success('标签前缀已更新，下一批开始生效'); setEditingCampaign(undefined); await queryClient.invalidateQueries({ queryKey: ['campaigns'] }); await queryClient.invalidateQueries({ queryKey: ['accounts'] }); }
+  });
 
   /** 停止或继续持续生产目标。 */
   async function changeStatus(id: string, action: 'resume' | 'stop') {
     await apiFetch(`/api/generation-campaigns/${id}/${action}`, { body: '{}', method: 'POST' });
     message.success(action === 'stop' ? '任务已停止' : '任务已继续');
     await queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+  }
+
+  /** 打开当前生产目标的标签前缀编辑弹窗。 */
+  function editPrefix(campaign: Campaign) {
+    setEditingCampaign(campaign);
+    prefixForm.setFieldsValue({ labelPrefix: campaign.labelPrefix });
   }
 
   return (
@@ -45,8 +59,13 @@ const TasksPage = () => {
           <Card loading={campaigns.isLoading} title="生产目标">
             <List dataSource={campaigns.data?.campaigns || []} renderItem={item => {
               const percent = Math.min(100, Math.round(item.currentTotal / item.targetTotal * 100));
-              return <List.Item actions={item.status === 'running' ? [<Button danger key="stop" onClick={() => changeStatus(item.id, 'stop')}>停止</Button>] : item.status === 'stopped' ? [<Button key="resume" onClick={() => changeStatus(item.id, 'resume')}>继续</Button>] : []}>
-                <div className="w-full"><div className="flex justify-between"><strong>{item.appleIdMasked}</strong><Tag>{item.status}</Tag></div><Progress percent={percent} /><Typography.Text type="secondary">库存 {item.currentTotal}/{item.targetTotal} · 每批 {item.batchSize}</Typography.Text></div>
+              const actions = item.status === 'running'
+                ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button danger key="stop" onClick={() => changeStatus(item.id, 'stop')}>停止</Button>]
+                : item.status === 'stopped'
+                  ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button key="resume" onClick={() => changeStatus(item.id, 'resume')}>继续</Button>]
+                  : [];
+              return <List.Item actions={actions}>
+                <div className="w-full"><div className="flex justify-between"><strong>{item.appleIdMasked}</strong><Tag>{item.status}</Tag></div><Progress percent={percent} /><Typography.Text type="secondary">库存 {item.currentTotal}/{item.targetTotal} · 每批 {item.batchSize} · 前缀 {item.labelPrefix}</Typography.Text></div>
               </List.Item>;
             }} />
           </Card>
@@ -55,6 +74,13 @@ const TasksPage = () => {
           </Card>
         </Space>
       </Col>
+      <Modal confirmLoading={prefixMutation.isPending} open={Boolean(editingCampaign)} title="修改标签前缀" onCancel={() => setEditingCampaign(undefined)} onOk={() => prefixForm.submit()}>
+        <Form form={prefixForm} layout="vertical" onFinish={values => prefixMutation.mutate(values)}>
+          <Form.Item extra="仅影响下一批及后续生成，已创建邮箱不会改名。" label="标签前缀" name="labelPrefix" rules={[{ required: true }, { max: 24 }, { pattern: /^[A-Za-z0-9_-]+$/, message: '只能包含字母、数字、下划线和短横线' }]}>
+            <Input maxLength={24} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </Row>
   );
 };

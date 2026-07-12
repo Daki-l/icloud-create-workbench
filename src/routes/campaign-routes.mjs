@@ -14,6 +14,9 @@ export function createCampaignRouter(campaignService) {
     res.status(201).json({ campaign });
   });
 
+  /** 修改目标后续批次使用的标签前缀。 */
+  router.patch("/:id", (req, res) => res.json(campaignService.updateLabelPrefix(req.params.id, req.body || {})));
+
   /** 停止后续自动批次。 */
   router.post("/:id/stop", (req, res) => res.json(campaignService.stopCampaign(req.params.id)));
 
