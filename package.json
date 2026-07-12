@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.mjs",
     "dev": "node --watch src/server.mjs",
-    "test": "node --test --test-concurrency=1",
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
     "init-env": "node scripts/init-env.mjs",
     "backup": "node scripts/backup-db.mjs"
   },

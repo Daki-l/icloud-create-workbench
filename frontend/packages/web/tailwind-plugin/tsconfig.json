@@ -1,0 +1,11 @@
+{
+  "extends": "@skyroc/tsconfig/web-app.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "~/*": ["./*"]
+    }
+  },
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": ["dist", "node_modules"]
+}

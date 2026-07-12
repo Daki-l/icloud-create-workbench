@@ -9,6 +9,13 @@ if (-not (Test-Path ".env")) {
 }
 
 npm install
+Push-Location frontend
+try {
+  corepack pnpm install --frozen-lockfile
+  corepack pnpm --filter skyroc-admin build
+} finally {
+  Pop-Location
+}
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
   py -3.12 -m venv .venv
 }
@@ -28,6 +35,13 @@ if ($Foreground) {
 } else {
   New-Item -ItemType Directory -Force -Path logs | Out-Null
   Start-Process -FilePath "npm.cmd" -ArgumentList "start" -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput "$Root\logs\server.log" -RedirectStandardError "$Root\logs\server-error.log"
-  Start-Sleep -Seconds 2
-  Invoke-RestMethod "http://127.0.0.1:4173/api/health" | ConvertTo-Json -Compress
+  for ($attempt = 1; $attempt -le 10; $attempt++) {
+    Start-Sleep -Seconds 1
+    try {
+      Invoke-RestMethod "http://127.0.0.1:4173/api/health" | ConvertTo-Json -Compress
+      break
+    } catch {
+      if ($attempt -eq 10) { throw }
+    }
+  }
 }

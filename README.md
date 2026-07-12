@@ -13,7 +13,21 @@
 - 未使用、已使用、垃圾箱状态与 CSV 导出
 - 邮箱、批次记录和邮件分页，支持批量修改使用状态
 - 每条 CK 独立 IMAP 配置、验证码提取和邮件预览
+- 每 30 秒按 CK 增量同步 IMAP，首次最多读取最近 100 封
+- 每个隐私邮箱可生成独立开放密钥，提供 JSON 最新邮件接口和只读网页
+- Skyroc Admin v3 管理界面、响应式布局、暗色主题和库存分页
 - Docker 镜像、SQLite 持久卷、健康检查和在线备份
+
+## 开放邮件接口
+
+在“邮箱库存”中点击“开放链接”，系统会生成一组仅展示一次的密钥和两个地址：
+
+```text
+GET /openapi/mail/:email/:token/latest
+GET /mail/:email/:token
+```
+
+JSON 接口返回该隐私邮箱在本地数据库中的最新邮件；暂无邮件时返回 `message: null`。重置或撤销后，旧密钥立即失效。开放请求不会临时连接 IMAP，后台同步器默认每 30 秒更新本地邮件。
 
 ## 获取 iCloud CK
 
@@ -79,7 +93,7 @@ npm run init-env
 .\start.ps1
 ```
 
-`start.ps1` 会自动把数据库路径切换为项目内的 `data/workbench.db`，不会写入 Windows 根目录。
+`start.ps1` 会自动安装根目录 npm 依赖、Skyroc 的 pnpm 依赖、构建前端，并把数据库路径切换为项目内的 `data/workbench.db`。
 
 ## HTTPS 升级
 

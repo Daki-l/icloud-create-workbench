@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "React Native Package",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "lib": ["ESNext"],
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": false,
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "types": ["react-native"]
+  }
+}

@@ -37,6 +37,9 @@ export function loadConfig(overrides = {}) {
     cooldownMinutes: readInteger("GENERATION_COOLDOWN_MINUTES", 60, 1, 1440),
     targetDefault: readInteger("GENERATION_TARGET_DEFAULT", 700, 1, 700),
     retryMinutes: readInteger("GENERATION_RETRY_MINUTES", 5, 1, 60),
+    inboxSyncIntervalSeconds: readInteger("INBOX_SYNC_INTERVAL_SECONDS", 30, 10, 3600),
+    inboxSyncConcurrency: readInteger("INBOX_SYNC_CONCURRENCY", 2, 1, 10),
+    publicMailRateLimit: readInteger("PUBLIC_MAIL_RATE_LIMIT", 60, 10, 1000),
     pythonCommand: process.env.PYTHON_COMMAND || "python",
     pythonBridge: resolve(process.env.PYTHON_BRIDGE || "./python/hme_bridge.py"),
     logLevel: process.env.LOG_LEVEL || "info"

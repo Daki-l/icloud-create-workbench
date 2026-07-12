@@ -1,0 +1,13 @@
+{
+  "all": "All",
+  "browser": "Browser Notification",
+  "clearAll": "Clear All",
+  "clearConfirm": "Are you sure to clear all notifications?",
+  "doNotDisturb": "Do Not Disturb",
+  "empty": "No notifications",
+  "markAllRead": "Mark All Read",
+  "message": "Message",
+  "sound": "Notification Sound",
+  "system": "System",
+  "title": "Notification Center"
+}

@@ -7,7 +7,7 @@ function csvCell(value) {
 }
 
 /** 创建隐藏邮箱查询、导出和状态路由。 */
-export function createAddressRouter(repositories) {
+export function createAddressRouter(repositories, publicMailService) {
   const router = Router();
 
   /** 按账号、状态或关键词查询隐藏邮箱。 */
@@ -41,6 +41,28 @@ export function createAddressRouter(repositories) {
     if (!["unused", "used", "trash"].includes(state)) return res.status(400).json({ error: "邮箱状态无效" });
     res.json({ updated: repositories.updateAddressStates(ids, state) });
   });
+
+  /** 返回隐私邮箱详情。 */
+  router.get("/:id", (req, res) => {
+    const address = repositories.getAddress(req.params.id);
+    if (!address) return res.status(404).json({ error: "邮箱不存在" });
+    res.json({ address });
+  });
+
+  /** 分页返回隐私邮箱关联邮件。 */
+  router.get("/:id/messages", (req, res) => {
+    if (!repositories.getAddress(req.params.id)) return res.status(404).json({ error: "邮箱不存在" });
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.min(100, Math.max(10, Number(req.query.pageSize || 20)));
+    const result = repositories.pageAddressMessages(req.params.id, page, pageSize);
+    res.json({ messages: result.rows, pagination: { page, pageSize, total: result.total, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) } });
+  });
+
+  /** 生成或轮换邮箱公开访问链接。 */
+  router.post("/:id/public-access", (req, res) => res.status(201).json(publicMailService.createAccess(req.params.id)));
+
+  /** 撤销邮箱公开访问链接。 */
+  router.delete("/:id/public-access", (req, res) => res.json(publicMailService.revokeAccess(req.params.id)));
 
   /** 修改隐藏邮箱本地状态。 */
   router.patch("/:id/state", (req, res) => {

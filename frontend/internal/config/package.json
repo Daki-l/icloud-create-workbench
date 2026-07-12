@@ -1,0 +1,59 @@
+{
+  "name": "@skyroc/config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared development configuration for Skyroc Admin (Vitest, Oxlint, etc.)",
+  "keywords": [
+    "config",
+    "oxlint",
+    "skyroc",
+    "typescript",
+    "vitest"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Ohh-889/skyroc-admin/tree/master/internal/config",
+  "bugs": {
+    "url": "https://github.com/Ohh-889/skyroc-admin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ohh-889/skyroc-admin.git",
+    "directory": "internal/config"
+  },
+  "author": {
+    "name": "Ohh",
+    "email": "1509326266@qq.com",
+    "url": "https://github.com/Ohh-889"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "oxlint"
+  ],
+  "type": "module",
+  "exports": {
+    "./oxlint/base.json": "./oxlint/base.json",
+    "./oxlint/next.json": "./oxlint/next.json",
+    "./oxlint/react.json": "./oxlint/react.json",
+    "./package.json": "./package.json",
+    "./vitest": {
+      "types": "./dist/index.d.mts",
+      "default": "./dist/index.mjs"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "dev": "tsdown --watch",
+    "lint": "oxlint",
+    "typecheck": "tsc --noEmit --skipLibCheck"
+  },
+  "devDependencies": {
+    "@skyroc/tsconfig": "workspace:*",
+    "oxlint": "catalog:dev",
+    "rimraf": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:core",
+    "vitest": "catalog:dev"
+  }
+}

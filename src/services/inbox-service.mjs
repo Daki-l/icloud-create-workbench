@@ -19,6 +19,13 @@ export function extractCode(text) {
 
 /** 创建全局 IMAP 收件服务。 */
 export function createInboxService({ config, repositories }) {
+  const activeSyncs = new Set();
+
+  /** 计算下一次后台同步时间。 */
+  function nextSyncAt() {
+    return new Date(Date.now() + config.inboxSyncIntervalSeconds * 1000).toISOString();
+  }
+
   /** 返回不包含密码的 IMAP 配置。 */
   function getConfig(accountId) {
     const stored = repositories.getInboxConfigInternal(accountId);
@@ -30,7 +37,10 @@ export function createInboxService({ config, repositories }) {
       secure: Boolean(stored.secure),
       email: stored.email,
       mailbox: stored.mailbox,
-      hasPassword: Boolean(stored.password_encrypted)
+      hasPassword: Boolean(stored.password_encrypted),
+      lastSyncAt: stored.last_sync_at || "",
+      nextSyncAt: stored.next_sync_at || "",
+      lastError: stored.last_error || ""
     };
   }
 
@@ -47,14 +57,18 @@ export function createInboxService({ config, repositories }) {
       ? encryptSecret(String(input.password), config.encryptionKey)
       : existing?.password_encrypted;
     if (!passwordEncrypted) throw Object.assign(new Error("首次配置必须填写 IMAP 密码或授权码"), { status: 400 });
+    const mailbox = String(input.mailbox || "INBOX").trim() || "INBOX";
+    const connectionChanged = !existing || existing.host !== host || existing.port !== port
+      || existing.email !== email || existing.mailbox !== mailbox || Boolean(existing.secure) !== (input.secure !== false);
     repositories.saveInboxConfig(accountId, {
       host,
       port,
       secure: input.secure !== false,
       email,
       passwordEncrypted,
-      mailbox: String(input.mailbox || "INBOX").trim() || "INBOX"
+      mailbox
     });
+    if (connectionChanged) repositories.resetInboxSyncState(accountId);
     return getConfig(accountId);
   }
 
@@ -64,10 +78,29 @@ export function createInboxService({ config, repositories }) {
     return repositories.listAddresses({ accountId }).find(item => lower.includes(item.email.toLowerCase()))?.email || "";
   }
 
-  /** 连接 IMAP 并同步最近邮件。 */
+  /** 解析并保存 IMAP 拉取到的一封邮件。 */
+  async function saveMessage(accountId, mailbox, message) {
+    const parsed = await simpleParser(message.source);
+    const bodyText = String(parsed.text || "").slice(0, 100_000);
+    const searchable = `${parsed.headers?.get("delivered-to") || ""}\n${parsed.to?.text || ""}\n${bodyText}`;
+    return repositories.insertMessage(accountId, {
+      uid: `${accountId}:${mailbox}:${message.uid}`,
+      subject: parsed.subject || "",
+      sender: parsed.from?.text || "",
+      recipient: matchHiddenAddress(accountId, searchable),
+      code: extractCode(`${parsed.subject || ""}\n${bodyText}`),
+      preview: bodyText.replace(/\s+/g, " ").slice(0, 240),
+      bodyText,
+      receivedAt: (parsed.date || message.internalDate || new Date()).toISOString()
+    });
+  }
+
+  /** 连接 IMAP 并按 UID 增量同步邮件。 */
   async function sync(accountId) {
+    if (activeSyncs.has(accountId)) throw Object.assign(new Error("该 CK 的邮箱正在同步"), { status: 409 });
     const stored = repositories.getInboxConfigInternal(accountId);
     if (!stored?.password_encrypted) throw Object.assign(new Error("尚未配置 IMAP 收件邮箱"), { status: 400 });
+    activeSyncs.add(accountId);
     const client = new ImapFlow({
       host: stored.host,
       port: stored.port,
@@ -76,35 +109,46 @@ export function createInboxService({ config, repositories }) {
       logger: false
     });
     let added = 0;
-    await client.connect();
+    let scanned = 0;
+    let lastUid = Number(stored.last_uid || 0);
+    let uidValidity = String(stored.uid_validity || "");
     try {
+      await client.connect();
       const lock = await client.getMailboxLock(stored.mailbox || "INBOX");
       try {
         const total = Number(client.mailbox?.exists || 0);
-        if (!total) return { added: 0, scanned: 0 };
-        const start = Math.max(1, total - 99);
-        for await (const message of client.fetch(`${start}:*`, { uid: true, source: true, envelope: true, internalDate: true })) {
-          const parsed = await simpleParser(message.source);
-          const bodyText = String(parsed.text || parsed.html || "").slice(0, 100_000);
-          const searchable = `${parsed.headers?.get("delivered-to") || ""}\n${parsed.to?.text || ""}\n${bodyText}`;
-          const inserted = repositories.insertMessage(accountId, {
-            uid: `${accountId}:${stored.mailbox || "INBOX"}:${message.uid}`,
-            subject: parsed.subject || "",
-            sender: parsed.from?.text || "",
-            recipient: matchHiddenAddress(accountId, searchable),
-            code: extractCode(`${parsed.subject || ""}\n${bodyText}`),
-            preview: bodyText.replace(/\s+/g, " ").slice(0, 240),
-            bodyText,
-            receivedAt: (parsed.date || message.internalDate || new Date()).toISOString()
-          });
+        const currentValidity = String(client.mailbox?.uidValidity || "");
+        if (uidValidity && currentValidity && uidValidity !== currentValidity) lastUid = 0;
+        uidValidity = currentValidity;
+        if (!total) {
+          repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
+          return { added: 0, scanned: 0 };
+        }
+        const uidNext = Number(client.mailbox?.uidNext || 0);
+        if (lastUid > 0 && uidNext > 0 && lastUid >= uidNext - 1) {
+          repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
+          return { added: 0, scanned: 0 };
+        }
+        const query = { uid: true, source: true, envelope: true, internalDate: true };
+        const range = lastUid > 0 ? `${lastUid + 1}:*` : `${Math.max(1, total - 99)}:*`;
+        const options = lastUid > 0 ? { uid: true } : undefined;
+        for await (const message of client.fetch(range, query, options)) {
+          scanned++;
+          lastUid = Math.max(lastUid, Number(message.uid || 0));
+          const inserted = await saveMessage(accountId, stored.mailbox || "INBOX", message);
           if (inserted) added++;
         }
-        return { added, scanned: Math.min(total, 100) };
+        repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
+        return { added, scanned };
       } finally {
         lock.release();
       }
+    } catch (error) {
+      repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: stored.last_sync_at, nextSyncAt: nextSyncAt(), lastError: error.message });
+      throw error;
     } finally {
       await client.logout().catch(() => {});
+      activeSyncs.delete(accountId);
     }
   }
 

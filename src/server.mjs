@@ -5,6 +5,8 @@ import { callPythonBridge } from "./python-bridge.mjs";
 import { createIcloudService } from "./services/icloud-service.mjs";
 import { createInboxService } from "./services/inbox-service.mjs";
 import { createCampaignService } from "./services/campaign-service.mjs";
+import { createPublicMailService } from "./services/public-mail-service.mjs";
+import { createInboxSyncWorker } from "./services/inbox-sync-worker.mjs";
 import { createApp } from "./app.mjs";
 
 /** 启动数据库、服务依赖和 HTTP 监听。 */
@@ -17,14 +19,18 @@ function main() {
   const icloudService = createIcloudService({ config, repositories, callBridge: callPythonBridge });
   const inboxService = createInboxService({ config, repositories });
   const campaignService = createCampaignService({ config, repositories, icloudService });
+  const publicMailService = createPublicMailService({ config, repositories });
+  const inboxSyncWorker = createInboxSyncWorker({ config, repositories, inboxService });
   campaignService.start();
-  const app = createApp({ config, repositories, icloudService, inboxService, campaignService });
+  inboxSyncWorker.start();
+  const app = createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService });
   const server = app.listen(config.port, config.host, () => {
     console.log(`iCloud 生产控制台已启动：http://${config.host}:${config.port}`);
   });
   const shutdown = signal => {
     console.log(`收到 ${signal}，正在关闭服务`);
     campaignService.close();
+    inboxSyncWorker.close();
     server.close(() => { db.close(); process.exit(0); });
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));

@@ -1,0 +1,88 @@
+{
+  "name": "@skyroc/color",
+  "version": "2.5.0",
+  "type": "module",
+  "description": "Color utilities and palette generation built on colord and culori, with Ant Design / OKLCH palettes",
+  "keywords": [
+    "antd",
+    "color",
+    "colord",
+    "culori",
+    "oklch",
+    "palette",
+    "react",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Ohh-889/skyroc-admin/tree/master/packages/@core/color",
+  "bugs": {
+    "url": "https://github.com/Ohh-889/skyroc-admin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ohh-889/skyroc-admin.git",
+    "directory": "packages/@core/color"
+  },
+  "author": {
+    "name": "Ohh",
+    "email": "1509326266@qq.com",
+    "url": "https://github.com/Ohh-889"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "dev": "tsdown --watch",
+    "lint": "oxlint --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "@skyroc/utils": "workspace:*",
+    "colord": "2.9.3",
+    "culori": "^4.0.2"
+  },
+  "devDependencies": {
+    "@skyroc/config": "workspace:*",
+    "@skyroc/tsconfig": "workspace:*",
+    "@types/culori": "^4.0.1",
+    "oxlint": "catalog:dev",
+    "rimraf": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:core"
+  }
+}

@@ -4,6 +4,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
+FROM node:24-bookworm-slim AS frontend-builder
+WORKDIR /frontend
+RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
+COPY frontend ./
+RUN pnpm install --frozen-lockfile && pnpm --filter skyroc-admin build
+
 FROM python:3.12-slim-bookworm AS runtime
 COPY --from=node:24-bookworm-slim /usr/local/ /usr/local/
 ENV NODE_ENV=production \
@@ -18,8 +24,8 @@ COPY --from=node-deps /app/node_modules ./node_modules
 COPY package.json ./
 COPY src ./src
 COPY python ./python
-COPY public ./public
 COPY scripts ./scripts
+COPY --from=frontend-builder /frontend/apps/admin/dist ./frontend/apps/admin/dist
 RUN mkdir -p /app/data && chown -R app:app /app /opt/venv
 USER app
 EXPOSE 4173

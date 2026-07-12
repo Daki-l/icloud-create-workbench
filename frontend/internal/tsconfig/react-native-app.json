@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "React Native Application",
+  "extends": "./react-native.json",
+  "compilerOptions": {
+    "lib": ["DOM", "ESNext"],
+    "allowJs": true,
+    "types": ["react-native", "nativewind/types"]
+  }
+}

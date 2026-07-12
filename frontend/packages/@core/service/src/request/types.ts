@@ -1,0 +1,77 @@
+import type { CreateAxiosDefaults } from '@skyroc/axios';
+
+/**
+ * 平台适配器接口
+ *
+ * 不同平台（antd / RN / Next.js）实现此接口， 使请求基础设施的错误处理、token 刷新、导航等逻辑可跨端复用。
+ */
+export interface RequestAdapter {
+  /** 使用 refresh token 换取新 token */
+  fetchRefreshToken(refreshToken: string): Promise<{ refreshToken: string; token: string }>;
+
+  /** 获取当前路由路径 */
+  getCurrentPath(): string;
+
+  /** 获取 refresh token */
+  getRefreshToken(): string | null;
+
+  /** 获取 access token */
+  getToken(): string | null;
+
+  /** 重定向到登录页 */
+  redirectToLogin(redirectPath?: string): void;
+
+  /** 清除认证信息 */
+  resetAuth(): void;
+
+  /** 保存认证信息 */
+  setAuth(tokens: { refreshToken: string; token: string }): void;
+
+  /** 展示错误消息（toast / message） */
+  showErrorMessage(msg: string, onClose?: () => void): void;
+
+  /** 展示错误弹窗（modal / dialog） */
+  showErrorModal(options: { content: string; maskClosable?: boolean; onConfirm: () => void; title: string }): void;
+
+  /** 国际化翻译 */
+  t(key: string): string;
+}
+
+/**
+ * 后端业务状态码配置
+ *
+ * 不同环境 / 后端可能使用不同的 code 体系
+ */
+export interface ServiceCodes {
+  /** Token 过期需要刷新的状态码 */
+  expiredToken: string[];
+  /** 需要登出的状态码 */
+  logout: string[];
+  /** 需要弹窗确认后登出的状态码 */
+  modalLogout: string[];
+  /** 请求成功的状态码 */
+  success: string;
+}
+
+/** 请求实例的内部状态 */
+export interface RequestInstanceState {
+  /** 当前正在展示的错误消息栈（防止重复展示） */
+  errMsgStack: string[];
+  /** 刷新 token 的 promise（防止并发刷新） */
+  refreshTokenPromise: Promise<boolean> | null;
+  [key: string]: unknown;
+}
+
+/** CreateAppRequest 工厂函数的配置项 */
+export interface CreateRequestOptions {
+  /** 平台适配器 */
+  adapter: RequestAdapter;
+  /** Axios 基础配置 */
+  axiosConfig?: CreateAxiosDefaults;
+  /** 后端业务状态码 */
+  codes: ServiceCodes;
+  /** 自定义后端成功判断（默认：response.data.code === codes.success） */
+  isBackendSuccess?: (response: { data: { code: string | number } }) => boolean;
+  /** 自定义响应数据转换（默认：response.data.data） */
+  transform?: (response: any) => any;
+}

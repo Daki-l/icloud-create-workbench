@@ -1,0 +1,82 @@
+{
+  "name": "@sa/uno-config",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "UnoCSS preset configuration for Soybean Admin themes, shortcuts, and design tokens",
+  "keywords": [
+    "design-system",
+    "preset",
+    "soybean-admin",
+    "theme",
+    "typescript",
+    "unocss"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Ohh-889/skyroc-admin/tree/master/internal/uno-config",
+  "bugs": {
+    "url": "https://github.com/Ohh-889/skyroc-admin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ohh-889/skyroc-admin.git",
+    "directory": "internal/uno-config"
+  },
+  "author": {
+    "name": "Ohh",
+    "email": "1509326266@qq.com",
+    "url": "https://github.com/Ohh-889"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./src/*"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "dev": "tsdown --watch",
+    "lint": "oxlint --fix",
+    "typecheck": "tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "@skyroc/color": "workspace:*",
+    "colord": "catalog:utils",
+    "glob": "^11.0.0"
+  },
+  "devDependencies": {
+    "@skyroc/tsconfig": "workspace:*",
+    "oxlint": "catalog:dev",
+    "rimraf": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:core",
+    "unocss": "^66.5.11"
+  }
+}

@@ -1,6 +1,7 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { createAuthRouter } from "./routes/auth-routes.mjs";
 import { createAccountRouter } from "./routes/account-routes.mjs";
@@ -8,13 +9,17 @@ import { createAddressRouter } from "./routes/address-routes.mjs";
 import { createInboxRouter } from "./routes/inbox-routes.mjs";
 import { createTaskRouter } from "./routes/task-routes.mjs";
 import { createCampaignRouter } from "./routes/campaign-routes.mjs";
+import { createMessageRouter } from "./routes/message-routes.mjs";
+import { createPublicMailRouter } from "./routes/public-mail-routes.mjs";
 import { requireAdmin, requireTrustedOrigin } from "./middleware.mjs";
 import { verifyAdminToken } from "./security.mjs";
 
 /** 创建配置完整的 Express 应用。 */
-export function createApp({ config, repositories, icloudService, inboxService, campaignService }) {
+export function createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService }) {
   const app = express();
-  const publicDir = join(process.cwd(), "public");
+  const skyrocDir = join(process.cwd(), "frontend", "apps", "admin", "dist");
+  const legacyDir = join(process.cwd(), "public");
+  const frontendDir = existsSync(join(skyrocDir, "index.html")) ? skyrocDir : legacyDir;
   app.disable("x-powered-by");
   app.set("trust proxy", 1);
   app.use(helmet({ contentSecurityPolicy: { directives: { "upgrade-insecure-requests": null } } }));
@@ -24,27 +29,38 @@ export function createApp({ config, repositories, icloudService, inboxService, c
 
   /** 返回不含敏感信息的健康状态。 */
   app.get("/api/health", (req, res) => res.json({ ok: true, service: "icloud-create-workbench" }));
+  app.use("/openapi", createPublicMailRouter(config, publicMailService));
   app.use("/api/auth", createAuthRouter(config));
 
   const requireApiAdmin = requireAdmin(config);
   app.use("/api/icloud-accounts", requireApiAdmin, createAccountRouter({ repositories, icloudService }));
-  app.use("/api/addresses", requireApiAdmin, createAddressRouter(repositories));
+  app.use("/api/addresses", requireApiAdmin, createAddressRouter(repositories, publicMailService));
+  app.use("/api/messages", requireApiAdmin, createMessageRouter(repositories));
   app.use("/api/inbox", requireApiAdmin, createInboxRouter({ inboxService, repositories }));
   app.use("/api/generation-jobs", requireApiAdmin, createTaskRouter(repositories));
   app.use("/api/generation-campaigns", requireApiAdmin, createCampaignRouter(campaignService));
 
-  app.use("/assets", express.static(join(publicDir, "assets"), {
-    etag: false,
-    maxAge: 0,
-    setHeaders: response => response.setHeader("Cache-Control", "no-store, max-age=0")
-  }));
-  app.get("/login.html", (req, res) => res.sendFile(join(publicDir, "login.html")));
-  app.get(["/", "/index.html", "/overview", "/accounts", "/tasks", "/addresses", "/inbox", "/guide"], (req, res) => {
+  for (const directory of ["assets", "css", "js"]) {
+    app.use(`/${directory}`, express.static(join(frontendDir, directory), { maxAge: "1h" }));
+  }
+  app.get("/favicon.svg", (req, res) => res.sendFile(join(frontendDir, "favicon.svg")));
+
+  /** 返回公开邮件或登录页面的 React 入口。 */
+  const sendFrontend = (req, res) => res.sendFile(join(frontendDir, "index.html"));
+  app.get(["/login", "/login/", "/login.html", "/login-out"], sendFrontend);
+  app.get("/mail/:email/:token", (req, res) => {
+    res.setHeader("Cache-Control", "no-store, max-age=0");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    sendFrontend(req, res);
+  });
+
+  /** 在服务器侧校验管理页面会话并返回 React 入口。 */
+  app.get(["/", "/index.html", "/home", "/overview", "/accounts", "/tasks", "/addresses", "/addresses/:id", "/inbox", "/guide"], (req, res) => {
     try {
       verifyAdminToken(req.cookies?.workbench_admin, config);
-      res.sendFile(join(publicDir, "index.html"));
+      sendFrontend(req, res);
     } catch {
-      res.redirect("/login.html");
+      res.redirect("/login");
     }
   });
 

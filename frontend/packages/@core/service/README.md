@@ -1,0 +1,423 @@
+# @skyroc/service
+
+平台无关的请求 & 查询基础设施 — 通过 Adapter 模式注入平台差异，使错误处理、token 刷新、QueryClient 等逻辑可跨端复用。
+
+## 解决什么问题
+
+典型中后台项目的请求层困境：
+
+```
+❌ 错误处理硬编码了 antd message / modal，React Native 无法复用
+❌ token 刷新逻辑绑定了 jotai store + localStorage，换个状态库就得重写
+❌ 登出跳转依赖 tanstack-router，换框架意味着改所有 catch 分支
+❌ 独立测试需要 mock 大量平台 API，测试成本高
+```
+
+@skyroc/service 的答案：**一个 Adapter 接口 + 两个工厂函数**。
+
+```
+✅ 核心逻辑零平台依赖，纯函数可独立测试
+✅ 各平台实现一个 Adapter 即可接入
+✅ QueryClient 配置统一收口，跨项目一致
+```
+
+## 核心概念
+
+### 架构总览
+
+```
+┌─────────────────────────────────────────────────────┐
+│                   @skyroc/service                    │
+│                                                     │
+│  ┌──────────────────┐   ┌────────────────────────┐  │
+│  │  createAppRequest │   │  createQueryClient     │  │
+│  │                  │   │                        │  │
+│  │  error-handler   │   │  默认 query / mutation  │  │
+│  │  token refresh   │   │  配置                   │  │
+│  │  错误消息去重     │   │  统一错误回调           │  │
+│  └───────┬──────────┘   └────────────────────────┘  │
+│          │                                          │
+│          │  依赖                                     │
+│          ▼                                          │
+│  ┌──────────────┐                                   │
+│  │ RequestAdapter│ ◄── 各平台实现                     │
+│  └──────────────┘                                   │
+└─────────────────────────────────────────────────────┘
+          ▲                          ▲
+          │                          │
+    ┌─────┴──────┐            ┌──────┴───────┐
+    │ antdAdapter │            │  rnAdapter   │
+    │ (Web/antd)  │            │ (React Native)│
+    └────────────┘            └──────────────┘
+```
+
+### RequestAdapter 接口
+
+每个平台需要实现的 6 类能力：
+
+| 能力       | 方法                                                     | 说明                     |
+| ---------- | -------------------------------------------------------- | ------------------------ |
+| UI 反馈    | `showErrorMessage` / `showErrorModal`                    | 错误提示的展示方式       |
+| Auth       | `getToken` / `getRefreshToken` / `setAuth` / `resetAuth` | 认证信息的存取           |
+| Token 刷新 | `fetchRefreshToken`                                      | 调用后端接口换取新 token |
+| 导航       | `getCurrentPath` / `redirectToLogin`                     | 路由跳转                 |
+| i18n       | `t`                                                      | 国际化翻译               |
+
+### ServiceCodes 配置
+
+声明后端业务状态码，不同环境可配置不同值：
+
+```ts
+interface ServiceCodes {
+  success: string; // 成功码，如 '0000'
+  logout: string[]; // 直接登出码
+  modalLogout: string[]; // 弹窗确认后登出码
+  expiredToken: string[]; // token 过期码（触发刷新）
+}
+```
+
+## 安装
+
+包已在 monorepo 内，直接引用：
+
+```ts
+import { createAppRequest } from '@skyroc/service';
+import { createQueryClient } from '@skyroc/service/query';
+```
+
+## 快速上手
+
+### 1. 实现平台 Adapter
+
+以 antd + tanstack-router 为例：
+
+```ts
+// apps/admin/src/service/adapter.ts
+import type { RequestAdapter } from '@skyroc/service';
+import { router } from '@/features/router';
+import { localStg } from '@/utils/storage';
+import { setAuth } from '@/features/auth/use-auth';
+import { $t } from '@/locales';
+import { fetchRefreshToken } from './api';
+
+export const antdAdapter: RequestAdapter = {
+  // ---- UI 反馈 ----
+  showErrorMessage(msg, onClose) {
+    if (onClose) {
+      showErrorMessage({ content: msg, onClose });
+    } else {
+      showErrorMessage(msg);
+    }
+  },
+  showErrorModal(options) {
+    showErrorModal({
+      content: options.content,
+      maskClosable: options.maskClosable ?? false,
+      onOk: () => options.onConfirm(),
+      onCancel: () => options.onConfirm(),
+      title: options.title
+    });
+  },
+
+  // ---- Auth ----
+  getToken: () => localStg.get('token') || null,
+  getRefreshToken: () => localStg.get('refreshToken') || null,
+  setAuth: tokens => setAuth(tokens),
+  resetAuth() {
+    localStg.remove('token');
+    localStg.remove('refreshToken');
+  },
+  async fetchRefreshToken(refreshToken) {
+    const data = await fetchRefreshToken(refreshToken);
+    return { token: data.token, refreshToken: data.refreshToken };
+  },
+
+  // ---- 导航 ----
+  getCurrentPath: () => router.state.location.href,
+  redirectToLogin: path => router.navigate({ to: '/login-out', search: { redirect: path } }),
+
+  // ---- i18n ----
+  t: key => $t(key)
+};
+```
+
+### 2. 创建请求实例
+
+```ts
+// apps/admin/src/service/request/index.ts
+import { createAppRequest } from '@skyroc/service';
+import { antdAdapter } from '../adapter';
+
+export const request = createAppRequest({
+  adapter: antdAdapter,
+  codes: {
+    success: '0000',
+    logout: ['8888', '8889'],
+    modalLogout: ['7777', '7778'],
+    expiredToken: ['9999', '9998', '3333']
+  },
+  axiosConfig: {
+    baseURL: '/api',
+    headers: { 'X-Custom': 'value' }
+  }
+});
+```
+
+### 3. 创建 QueryClient
+
+```ts
+// apps/admin/src/service/queryClient.ts
+import { createQueryClient } from '@skyroc/service/query';
+
+export const queryClient = createQueryClient({
+  onError: error => {
+    if (import.meta.env.DEV) {
+      console.error('Query/Mutation error:', error);
+    }
+  }
+});
+```
+
+### 4. 像往常一样使用
+
+```ts
+// 业务代码无需改变
+const userInfo = await request<Api.Auth.UserInfo>({ url: '/user/info' });
+```
+
+## API
+
+### `createAppRequest(options)`
+
+创建平台无关的请求实例。
+
+```ts
+interface CreateRequestOptions {
+  adapter: RequestAdapter; // 平台适配器
+  codes: ServiceCodes; // 后端业务状态码
+  axiosConfig?: CreateAxiosDefaults; // axios 基础配置
+  isBackendSuccess?: (response) => boolean; // 自定义成功判断
+  transform?: (response) => any; // 自定义响应转换
+}
+```
+
+返回值与 `@skyroc/axios` 的 `createRequest` 一致，是一个可直接调用的函数：
+
+```ts
+const request = createAppRequest({ ... });
+
+// 直接调用
+const data = await request<UserInfo>({ url: '/user/info' });
+
+// 取消所有请求
+request.cancelAllRequest();
+
+// 访问内部状态（调试用）
+request.state.errMsgStack;
+```
+
+#### 默认行为
+
+| 行为     | 默认实现                                        | 可覆盖             |
+| -------- | ----------------------------------------------- | ------------------ |
+| 成功判断 | `response.data.code === codes.success`          | `isBackendSuccess` |
+| 数据转换 | `response.data.data`                            | `transform`        |
+| 请求拦截 | 自动注入 `Bearer {token}`                       | —                  |
+| 错误处理 | 根据 `codes` 分流（登出 / 弹窗 / 刷新 / toast） | —                  |
+
+#### 错误处理流程
+
+```
+后端返回非成功码
+    │
+    ├─ logout codes     → showErrorMessage + 跳转登录页
+    ├─ modalLogout codes → showErrorModal + 确认后登出
+    ├─ expiredToken codes → 自动刷新 token + 重试原请求
+    └─ 其他              → 抛出 AxiosError（由 onError 兜底展示 toast）
+```
+
+### `createQueryClient(options?)`
+
+创建带统一默认配置的 QueryClient 实例。
+
+```ts
+interface CreateQueryClientOptions {
+  /** 覆盖默认 defaultOptions（会与内置默认值浅合并） */
+  defaultOptions?: DefaultOptions;
+  /** MutationCache 配置（onError / onSuccess / onSettled / onMutate） */
+  mutationCache?: MutationCacheConfig;
+  /** QueryCache 配置（onError / onSuccess / onSettled） */
+  queryCache?: QueryCacheConfig;
+}
+```
+
+可通过 `defaultOptions` 覆盖任意配置项：
+
+```ts
+const queryClient = createQueryClient({
+  defaultOptions: {
+    queries: { staleTime: 60_000, retry: 3 },
+    mutations: { retry: 2 },
+  },
+  queryCache: {
+    onError: (error) => console.error('Query error:', error),
+  },
+});
+```
+
+#### 默认 Query 配置
+
+| 配置项                 | 默认值 | 说明 |
+| ---------------------- | ------ | ---- |
+| `gcTime`               | `600000`（10 分钟） | 垃圾回收时间 |
+| `staleTime`            | `30000`（30 秒） | 数据过期时间 |
+| `retry`                | `2` | 失败重试次数 |
+| `retryDelay`           | 指数退避，上限 30 秒 | `min(1000 × 2^n, 30000)` |
+| `refetchOnMount`       | `true` | 组件挂载时重新获取 |
+| `refetchOnReconnect`   | `true` | 网络恢复时重新获取 |
+| `refetchOnWindowFocus` | `false` | 窗口聚焦时不重新获取 |
+| `throwOnError`         | `false` | 不向上抛出错误 |
+| `networkMode`          | `'online'` | 仅在线时发起请求 |
+
+#### 默认 Mutation 配置
+
+| 配置项       | 默认值 | 说明 |
+| ------------ | ------ | ---- |
+| `gcTime`     | `60000`（1 分钟） | 垃圾回收时间 |
+| `retry`      | `1` | 失败重试次数 |
+| `retryDelay` | 指数退避，上限 10 秒 | `min(1000 × 2^n, 10000)` |
+| `throwOnError` | `false` | 不向上抛出错误 |
+| `networkMode` | `'online'` | 仅在线时发起请求 |
+
+### 内部工具函数（按需导出）
+
+```ts
+import {
+  getAuthorization, // 构造 'Bearer xxx' header
+  handleRefreshToken, // 刷新 token 逻辑
+  handleExpiredRequest, // 并发安全的 token 刷新
+  showErrorMsg, // 去重错误消息展示
+  backEndFail, // 后端业务错误处理
+  handleError // 网络层错误处理
+} from '@skyroc/service';
+```
+
+这些函数全部接收 `adapter` 参数，不依赖任何全局状态，可独立调用和测试。
+
+## Token 刷新机制
+
+并发的 Token 过期请求只触发一次 `fetchRefreshToken`，其余请求等待同一个 Promise 的结果后重试：
+
+```
+请求 A ─┐                      ┌─ 带新 Token 重试 A
+请求 B ─┤  共享同一个            ├─ 带新 Token 重试 B
+请求 C ─┤  refreshTokenPromise  ├─ 带新 Token 重试 C
+        └──────────────────────┘
+                  │
+     1 秒后清除 promise，下次过期重新刷新
+```
+
+刷新成功后 1 秒清除缓存的 Promise，避免长时间持有过期引用。
+
+## 错误消息去重
+
+`showErrorMsg` 维护一个消息栈，同一条消息在展示期间不会重复弹出：
+
+```
+showErrorMsg("网络异常")  → 展示 ✅
+showErrorMsg("网络异常")  → 跳过（栈中已存在）
+       ↓ 用户关闭消息
+showErrorMsg("网络异常")  → 展示 ✅（已从栈移除）
+       ↓ 5 秒后
+消息栈自动清空
+```
+
+## 适用场景
+
+### 场景一：Web 中后台（antd）
+
+当前项目的主要使用方式。adapter 对接 antd message/modal + jotai + tanstack-router。
+
+### 场景二：React Native App
+
+```ts
+// adapters/rn-adapter.ts
+import { Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+export const rnAdapter: RequestAdapter = {
+  showErrorMessage: msg => Alert.alert('Error', msg),
+  showErrorModal: opts => Alert.alert(opts.title, opts.content, [{ text: 'OK', onPress: opts.onConfirm }]),
+  getToken: () => AsyncStorage.getItem('token'),
+  redirectToLogin: () => navigation.navigate('Login'),
+  t: key => i18n.t(key)
+  // ...
+};
+```
+
+### 场景三：Next.js SSR/SSG
+
+```ts
+// adapters/next-adapter.ts
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+
+export const nextAdapter: RequestAdapter = {
+  getToken: () => cookies().get('token')?.value ?? null,
+  redirectToLogin: path => redirect(`/login?redirect=${path}`),
+  showErrorMessage: msg => toast.error(msg) // sonner / react-hot-toast
+  // ...
+};
+```
+
+### 场景四：独立测试
+
+核心逻辑不依赖任何平台 API，mock adapter 即可测试所有分支：
+
+```ts
+const mockAdapter: RequestAdapter = {
+  showErrorMessage: vi.fn(),
+  showErrorModal: vi.fn(),
+  getToken: vi.fn(() => 'test-token'),
+  redirectToLogin: vi.fn(),
+  t: vi.fn(key => key)
+  // ...
+};
+
+// 直接测试错误处理逻辑
+backEndFail(response, instance, request, mockAdapter, codes);
+expect(mockAdapter.redirectToLogin).toHaveBeenCalled();
+```
+
+## 与改造前对比
+
+| 改造前                                              | 改造后                                               |
+| --------------------------------------------------- | ---------------------------------------------------- |
+| error.ts 硬编码 `showErrorMessage`（antd 全局方法） | adapter.showErrorMessage — 平台自己决定怎么展示      |
+| shared.ts 硬编码 `localStg.get('token')`            | adapter.getToken — 存储方式由平台决定                |
+| shared.ts 硬编码 `router.navigate`                  | adapter.redirectToLogin — 路由框架由平台决定         |
+| error.ts 从 `import.meta.env` 读取 codes            | 显式传入 `ServiceCodes` — 可来自 env、配置文件或远程 |
+| queryClient.ts 直接 `new QueryClient`               | `createQueryClient` 工厂 — 默认配置统一收口          |
+| 测试需要 mock antd + jotai + router + localStorage  | mock 一个 adapter 对象即可                           |
+
+## 设计原则
+
+- **零平台依赖** — 核心逻辑只依赖 `@skyroc/axios` 和 `@tanstack/react-query`，不依赖任何 UI 库 / 路由 / 状态管理
+- **Adapter 模式** — 平台差异通过接口注入，而非条件分支
+- **纯函数优先** — error-handler、shared 中的每个函数都接收全部依赖作为参数
+- **约定优于配置** — 默认假设 `{ code, data, msg }` 响应格式，可通过 `isBackendSuccess` / `transform` 覆盖
+
+## 测试
+
+```bash
+# 从 monorepo 根目录
+npx vitest run packages/@core/service/__tests__
+
+# 或在包目录内
+cd packages/@core/service && pnpm test
+
+# 含覆盖率报告
+pnpm test --coverage
+```
+
+52 个测试用例，覆盖率：Statements 100% / Branches 95% / Functions 100% / Lines 100%，覆盖：请求实例创建与默认回调、业务状态码（登出 / 弹窗登出 / Token 过期）处理、Token 刷新与并发共享、错误消息去重、QueryClient 配置合并、指数退避重试延迟。

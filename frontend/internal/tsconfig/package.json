@@ -1,0 +1,25 @@
+{
+  "name": "@skyroc/tsconfig",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared TypeScript configuration for Skyroc Admin",
+  "files": [
+    "base.json",
+    "library.json",
+    "node.json",
+    "react-native-app.json",
+    "react-native.json",
+    "web-app.json",
+    "web.json"
+  ],
+  "type": "module",
+  "exports": {
+    "./base.json": "./base.json",
+    "./library.json": "./library.json",
+    "./node.json": "./node.json",
+    "./web.json": "./web.json",
+    "./web-app.json": "./web-app.json",
+    "./react-native.json": "./react-native.json",
+    "./react-native-app.json": "./react-native-app.json"
+  }
+}

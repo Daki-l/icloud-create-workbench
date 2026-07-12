@@ -296,6 +296,10 @@ export function createRepositories(db) {
     const total = Number(db.prepare(`SELECT COUNT(*) AS count FROM hidden_addresses h WHERE ${clause}`).get(...values).count || 0);
     const rows = db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
       h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id_masked AS appleIdMasked
+      ,(SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount
+      ,(SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt
+      ,(SELECT m.code FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestCode
+      ,EXISTS(SELECT 1 FROM address_public_access p WHERE p.address_id = h.id) AS publicAccessEnabled
       FROM hidden_addresses h LEFT JOIN icloud_accounts a ON a.id = h.account_id
       WHERE ${clause} ORDER BY h.created_at DESC LIMIT ? OFFSET ?`)
       .all(...values, pageSize, (page - 1) * pageSize);
@@ -319,9 +323,86 @@ export function createRepositories(db) {
     })(ids);
   }
 
+  /** 读取邮箱详情及其所属 CK 摘要。 */
+  function getAddress(id) {
+    return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
+      h.local_state AS state, h.source, h.created_at AS createdAt, h.updated_at AS updatedAt,
+      a.apple_id_masked AS appleIdMasked, a.region,
+      (SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount,
+      (SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt,
+      (SELECT m.code FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestCode,
+      EXISTS(SELECT 1 FROM address_public_access p WHERE p.address_id = h.id) AS publicAccessEnabled
+      FROM hidden_addresses h LEFT JOIN icloud_accounts a ON a.id = h.account_id WHERE h.id = ?`).get(id);
+  }
+
+  /** 分页读取指定隐私邮箱关联的邮件。 */
+  function pageAddressMessages(addressId, page = 1, pageSize = 20) {
+    const total = Number(db.prepare("SELECT COUNT(*) AS count FROM inbox_messages WHERE address_id = ?").get(addressId).count || 0);
+    const rows = db.prepare(`SELECT id, subject, sender, code, preview, received_at AS receivedAt
+      FROM inbox_messages WHERE address_id = ? ORDER BY received_at DESC LIMIT ? OFFSET ?`)
+      .all(addressId, pageSize, (page - 1) * pageSize);
+    return { rows, total, page, pageSize };
+  }
+
+  /** 读取单封邮件的完整纯文本正文。 */
+  function getMessage(id) {
+    return db.prepare(`SELECT m.id, m.account_id AS accountId, m.address_id AS addressId,
+      m.subject, m.sender, m.code, m.preview, m.body_text AS bodyText, m.received_at AS receivedAt,
+      h.email AS hiddenEmail FROM inbox_messages m LEFT JOIN hidden_addresses h ON h.id = m.address_id
+      WHERE m.id = ?`).get(id);
+  }
+
+  /** 创建或轮换邮箱公开访问密钥哈希。 */
+  function savePublicAccess(addressId, tokenHash) {
+    const now = new Date().toISOString();
+    db.prepare(`INSERT INTO address_public_access (address_id, token_hash, created_at)
+      VALUES (?, ?, ?) ON CONFLICT(address_id) DO UPDATE SET token_hash = excluded.token_hash,
+      rotated_at = excluded.created_at, last_access_at = NULL`).run(addressId, tokenHash, now);
+  }
+
+  /** 撤销邮箱公开访问。 */
+  function revokePublicAccess(addressId) {
+    return db.prepare("DELETE FROM address_public_access WHERE address_id = ?").run(addressId).changes > 0;
+  }
+
+  /** 使用邮箱和密钥哈希读取最新邮件。 */
+  function getLatestPublicMail(email, tokenHash) {
+    const access = db.prepare(`SELECT h.id AS addressId, h.email FROM hidden_addresses h
+      JOIN address_public_access p ON p.address_id = h.id
+      WHERE lower(h.email) = lower(?) AND p.token_hash = ?`).get(email, tokenHash);
+    if (!access) return null;
+    const message = db.prepare(`SELECT id, subject, sender, code, preview, body_text AS bodyText,
+      received_at AS receivedAt FROM inbox_messages WHERE address_id = ? ORDER BY received_at DESC LIMIT 1`)
+      .get(access.addressId) || null;
+    db.prepare("UPDATE address_public_access SET last_access_at = ? WHERE address_id = ?")
+      .run(new Date().toISOString(), access.addressId);
+    return { email: access.email, message };
+  }
+
   /** 读取全局 IMAP 配置内部数据。 */
   function getInboxConfigInternal(accountId) {
     return db.prepare("SELECT * FROM account_inbox_configs WHERE account_id = ?").get(accountId);
+  }
+
+  /** 列出所有已配置 IMAP 的 CK。 */
+  function listInboxConfigs() {
+    return db.prepare(`SELECT * FROM account_inbox_configs
+      WHERE host IS NOT NULL AND email IS NOT NULL AND password_encrypted IS NOT NULL`).all();
+  }
+
+  /** 保存 IMAP 增量游标和下次同步时间。 */
+  function updateInboxSyncState(accountId, input) {
+    db.prepare(`UPDATE account_inbox_configs SET last_uid = ?, uid_validity = ?, last_sync_at = ?,
+      next_sync_at = ?, last_error = ?, updated_at = ? WHERE account_id = ?`)
+      .run(input.lastUid, input.uidValidity || "", input.lastSyncAt || null, input.nextSyncAt || null,
+        input.lastError || "", new Date().toISOString(), accountId);
+  }
+
+  /** 重置 IMAP 增量游标并安排立即同步。 */
+  function resetInboxSyncState(accountId) {
+    db.prepare(`UPDATE account_inbox_configs SET last_uid = 0, uid_validity = NULL,
+      next_sync_at = ?, last_error = '', updated_at = ? WHERE account_id = ?`)
+      .run(new Date().toISOString(), new Date().toISOString(), accountId);
   }
 
   /** 保存全局 IMAP 配置。 */
@@ -371,6 +452,8 @@ export function createRepositories(db) {
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
-    getInboxConfigInternal, saveInboxConfig, insertMessage, listMessages, pageMessages
+    getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
+    getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState,
+    saveInboxConfig, insertMessage, listMessages, pageMessages
   };
 }

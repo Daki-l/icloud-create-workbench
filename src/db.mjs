@@ -97,6 +97,11 @@ export function createDatabase(databasePath) {
       email TEXT,
       password_encrypted TEXT,
       mailbox TEXT,
+      last_uid INTEGER NOT NULL DEFAULT 0,
+      uid_validity TEXT,
+      last_sync_at TEXT,
+      next_sync_at TEXT,
+      last_error TEXT,
       updated_at TEXT,
       FOREIGN KEY(account_id) REFERENCES icloud_accounts(id)
     );
@@ -113,16 +118,37 @@ export function createDatabase(databasePath) {
       created_at TEXT NOT NULL,
       FOREIGN KEY(address_id) REFERENCES hidden_addresses(id)
     );
+    CREATE TABLE IF NOT EXISTS address_public_access (
+      address_id TEXT PRIMARY KEY,
+      token_hash TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      rotated_at TEXT,
+      last_access_at TEXT,
+      FOREIGN KEY(address_id) REFERENCES hidden_addresses(id)
+    );
     CREATE INDEX IF NOT EXISTS idx_jobs_account ON generation_jobs(account_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_addresses_account ON hidden_addresses(account_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_results_job ON generation_results(job_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_campaigns_due ON generation_campaigns(status, next_run_at);
     CREATE INDEX IF NOT EXISTS idx_messages_received ON inbox_messages(received_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_messages_address ON inbox_messages(address_id, received_at DESC);
   `);
   const messageColumns = db.pragma("table_info(inbox_messages)");
   if (!messageColumns.some(column => column.name === "account_id")) {
     db.exec("ALTER TABLE inbox_messages ADD COLUMN account_id TEXT REFERENCES icloud_accounts(id)");
   }
+  const configColumns = db.pragma("table_info(account_inbox_configs)");
+  const inboxMigrations = [
+    ["last_uid", "ALTER TABLE account_inbox_configs ADD COLUMN last_uid INTEGER NOT NULL DEFAULT 0"],
+    ["uid_validity", "ALTER TABLE account_inbox_configs ADD COLUMN uid_validity TEXT"],
+    ["last_sync_at", "ALTER TABLE account_inbox_configs ADD COLUMN last_sync_at TEXT"],
+    ["next_sync_at", "ALTER TABLE account_inbox_configs ADD COLUMN next_sync_at TEXT"],
+    ["last_error", "ALTER TABLE account_inbox_configs ADD COLUMN last_error TEXT"]
+  ];
+  for (const [name, sql] of inboxMigrations) {
+    if (!configColumns.some(column => column.name === name)) db.exec(sql);
+  }
   db.exec("CREATE INDEX IF NOT EXISTS idx_messages_account ON inbox_messages(account_id, received_at DESC)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_inbox_configs_due ON account_inbox_configs(next_sync_at)");
   return db;
 }

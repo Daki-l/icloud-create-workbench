@@ -1,0 +1,8 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@plugin "@skyroc/tailwind-plugin" {
+}
+
+@source "./**/*.{ts,tsx}";

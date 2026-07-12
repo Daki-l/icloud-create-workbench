@@ -12,7 +12,8 @@ function createTestApp() {
     adminPasswordHash: hashPassword("correct-password"),
     jwtSecret: "test-jwt-secret-that-is-long-enough-123456789",
     jwtExpiresIn: "8h",
-    cookieSecure: false
+    cookieSecure: false,
+    publicMailRateLimit: 60
   };
   const repositories = {
     listAccounts: () => [],
@@ -25,7 +26,8 @@ function createTestApp() {
   const icloudService = {};
   const inboxService = { getConfig: () => ({ configured: false }) };
   const campaignService = { listCampaigns: () => [] };
-  return createApp({ config, repositories, icloudService, inboxService, campaignService });
+  const publicMailService = { getLatest: () => null };
+  return createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService });
 }
 
 test("健康检查无需登录且不返回配置", async () => {
@@ -35,6 +37,13 @@ test("健康检查无需登录且不返回配置", async () => {
 
 test("未登录时受保护 API 返回 401", async () => {
   await request(createTestApp()).get("/api/icloud-accounts").expect(401);
+});
+
+test("管理页面要求登录但登录页和公开邮件页可匿名访问", async () => {
+  const app = createTestApp();
+  await request(app).get("/index.html").expect(302).expect("Location", "/login");
+  await request(app).get("/login").expect(200).expect("Content-Type", /html/);
+  await request(app).get("/mail/example%40icloud.com/public-token").expect(200).expect("Content-Type", /html/);
 });
 
 test("可信来源登录后可以访问受保护 API", async () => {

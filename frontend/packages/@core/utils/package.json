@@ -1,0 +1,113 @@
+{
+  "name": "@skyroc/utils",
+  "version": "2.0.2",
+  "type": "module",
+  "description": "Platform-agnostic utility functions with ./web subpath for browser-only utilities (download, window, BOM helpers)",
+  "keywords": [
+    "browser",
+    "crypto",
+    "date",
+    "dayjs",
+    "platform-agnostic",
+    "react",
+    "storage",
+    "typescript",
+    "utility"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/Ohh-889/skyroc-admin/tree/master/packages/@core/utils",
+  "bugs": {
+    "url": "https://github.com/Ohh-889/skyroc-admin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ohh-889/skyroc-admin.git",
+    "directory": "packages/@core/utils"
+  },
+  "author": {
+    "name": "Ohh",
+    "email": "1509326266@qq.com",
+    "url": "https://github.com/Ohh-889"
+  },
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
+  "typesVersions": {
+    "*": {
+      "path": [
+        "./src/path.ts"
+      ],
+      "web": [
+        "./src/web/index.ts"
+      ]
+    }
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./path": "./src/path.ts",
+    "./web": "./src/web/index.ts"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        }
+      },
+      "./path": {
+        "import": {
+          "types": "./dist/path.d.ts",
+          "default": "./dist/path.js"
+        }
+      },
+      "./web": {
+        "import": {
+          "types": "./dist/web/index.d.ts",
+          "default": "./dist/web/index.js"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "clean": "rimraf dist",
+    "dev": "tsdown --watch",
+    "lint": "oxlint --fix",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "@skyroc/type-utils": "workspace:*",
+    "clsx": "catalog:utils",
+    "colord": "catalog:utils",
+    "crypto-js": "catalog:utils",
+    "dayjs": "catalog:utils",
+    "klona": "catalog:utils",
+    "localforage": "catalog:utils",
+    "nanoid": "catalog:utils",
+    "radash": "^12.1.1",
+    "tailwind-merge": "catalog:utils"
+  },
+  "devDependencies": {
+    "@skyroc/config": "workspace:*",
+    "@skyroc/tsconfig": "workspace:*",
+    "@types/crypto-js": "catalog:dev",
+    "oxlint": "catalog:dev",
+    "rimraf": "catalog:dev",
+    "tsdown": "catalog:dev",
+    "typescript": "catalog:core"
+  }
+}

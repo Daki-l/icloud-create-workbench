@@ -1,0 +1,94 @@
+{
+  "$schema": "../../../node_modules/oxlint/configuration_schema.json",
+  "extends": [
+    "./base.json"
+  ],
+  "plugins": [
+    "node",
+    "import",
+    "unicorn",
+    "typescript",
+    "eslint",
+    "oxc",
+    "vitest",
+    "react"
+  ],
+  "rules": {
+    "import/no-absolute-path": "warn",
+    "import/no-empty-named-blocks": [
+      "error"
+    ],
+    "react/hook-use-state": [
+      "error",
+      {
+        "allowDestructuredState": true
+      }
+    ],
+    "react/jsx-curly-brace-presence": [
+      "warn",
+      {
+        "children": "never",
+        "propElementValues": "always",
+        "props": "never"
+      }
+    ],
+    "react/jsx-fragments": [
+      "warn",
+      "syntax"
+    ],
+    "react/jsx-no-useless-fragment": "warn",
+    "react/react-in-jsx-scope": "off",
+    "react/self-closing-comp": [
+      "error",
+      {
+        "component": true,
+        "html": true
+      }
+    ],
+    "react/only-export-components": [
+      "warn",
+      {
+        "allowExportNames": [
+          "loader",
+          "action",
+          "handle",
+          "shouldRevalidate"
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/*.?([cm])jsx",
+        "**/*.?([cm])tsx"
+      ],
+      "rules": {
+        "react/display-name": "error",
+        "react/jsx-key": "error",
+        "react/jsx-no-comment-textnodes": "error",
+        "react/jsx-no-duplicate-props": "error",
+        "react/jsx-no-target-blank": "error",
+        "react/no-children-prop": "error",
+        "react/no-danger-with-children": "error",
+        "react/no-direct-mutation-state": "error",
+        "react/no-find-dom-node": "error",
+        "react/no-is-mounted": "error",
+        "react/no-render-return-value": "error",
+        "react/no-string-refs": "error",
+        "react/no-unescaped-entities": "error",
+        "react/no-unknown-property": "error",
+        "react/no-unsafe": "off",
+        "react/react-in-jsx-scope": "off",
+        "react/exhaustive-deps": "warn",
+        "react/rules-of-hooks": "error",
+        "react/only-export-components": [
+          "warn",
+          {
+            "allowConstantExport": true
+          }
+        ]
+      }
+    }
+  ]
+}
