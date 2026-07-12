@@ -73,3 +73,15 @@ test("生产目标可修改后续批次标签前缀并同步 CK 默认值", () =
     assert.equal(context.repositories.getAccountInternal(context.account.id).label_prefix, "new_prefix");
   } finally { context.cleanup(); }
 });
+
+test("删除生产目标时保留已经生成的邮箱库存", async () => {
+  const context = createContext();
+  try {
+    const campaign = context.service.createCampaign({ accountId: context.account.id, targetTotal: 10 });
+    await context.service.wake();
+    assert.equal(context.repositories.countAddresses(context.account.id), 5);
+    context.service.deleteCampaign(campaign.id);
+    assert.equal(context.service.listCampaigns(10).length, 0);
+    assert.equal(context.repositories.countAddresses(context.account.id), 5);
+  } finally { context.cleanup(); }
+});

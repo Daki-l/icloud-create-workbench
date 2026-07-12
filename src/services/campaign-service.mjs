@@ -56,6 +56,14 @@ export function createCampaignService({ config, repositories, icloudService }) {
     return { ok: true, labelPrefix };
   }
 
+  /** 删除生产目标并停止后续自动批次。 */
+  function deleteCampaign(id) {
+    const campaign = repositories.getCampaignInternal(id);
+    if (!campaign) throw Object.assign(new Error("生产目标不存在"), { status: 404 });
+    if (!repositories.deleteCampaign(id)) throw Object.assign(new Error("生产目标删除失败"), { status: 409 });
+    return { ok: true };
+  }
+
   /** 停止目标的后续自动批次。 */
   function stopCampaign(id) {
     if (!repositories.stopCampaign(id)) throw Object.assign(new Error("运行中的生产目标不存在"), { status: 404 });
@@ -126,6 +134,7 @@ export function createCampaignService({ config, repositories, icloudService }) {
   return {
     createCampaign,
     updateLabelPrefix,
+    deleteCampaign,
     stopCampaign,
     resumeCampaign,
     listCampaigns: limit => repositories.listCampaigns(limit),

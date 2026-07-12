@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, Card, Col, Form, Input, InputNumber, List, Modal, Progress, Row, Select, Space, Tag, Typography, message } from 'antd';
+import { Button, Card, Col, Form, Input, InputNumber, List, Modal, Popconfirm, Progress, Row, Select, Space, Tag, Typography, message } from 'antd';
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 
@@ -38,6 +38,13 @@ const TasksPage = () => {
   async function changeStatus(id: string, action: 'resume' | 'stop') {
     await apiFetch(`/api/generation-campaigns/${id}/${action}`, { body: '{}', method: 'POST' });
     message.success(action === 'stop' ? '任务已停止' : '任务已继续');
+    await queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+  }
+
+  /** 删除生产目标并保留邮箱与批次历史。 */
+  async function deleteCampaign(id: string) {
+    await apiFetch(`/api/generation-campaigns/${id}`, { method: 'DELETE' });
+    message.success('生产目标已删除，邮箱和批次历史已保留');
     await queryClient.invalidateQueries({ queryKey: ['campaigns'] });
   }
 
@@ -80,11 +87,12 @@ const TasksPage = () => {
           <Card loading={campaigns.isLoading} title="生产目标">
             <List dataSource={campaigns.data?.campaigns || []} renderItem={item => {
               const percent = Math.min(100, Math.round(item.currentTotal / item.targetTotal * 100));
+              const deleteAction = <Popconfirm key="delete" description="已生成邮箱和批次历史会保留。" title="确认删除该生产目标？" onConfirm={() => deleteCampaign(item.id)}><Button danger>删除</Button></Popconfirm>;
               const actions = item.status === 'running'
-                ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button danger key="stop" onClick={() => changeStatus(item.id, 'stop')}>停止</Button>]
+                ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button key="stop" onClick={() => changeStatus(item.id, 'stop')}>停止</Button>, deleteAction]
                 : item.status === 'stopped'
-                  ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button key="resume" onClick={() => changeStatus(item.id, 'resume')}>继续</Button>]
-                  : [];
+                  ? [<Button key="prefix" onClick={() => editPrefix(item)}>修改前缀</Button>, <Button key="resume" onClick={() => changeStatus(item.id, 'resume')}>继续</Button>, deleteAction]
+                  : [deleteAction];
               return <List.Item actions={actions}>
                 <div className="w-full">
                   <div className="flex justify-between"><strong>{item.appleIdMasked}</strong><Tag>{item.status}</Tag></div>

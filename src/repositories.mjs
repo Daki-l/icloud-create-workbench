@@ -255,6 +255,11 @@ export function createRepositories(db) {
     })();
   }
 
+  /** 删除指定生产目标，不触碰邮箱库存和批次记录。 */
+  function deleteCampaign(id) {
+    return db.prepare("DELETE FROM generation_campaigns WHERE id = ?").run(id).changes > 0;
+  }
+
   /** 标记目标已达到库存总数。 */
   function completeCampaign(id) {
     db.prepare("UPDATE generation_campaigns SET status = 'completed', next_run_at = NULL, last_error = NULL, updated_at = ? WHERE id = ? AND status != 'stopped'")
@@ -480,7 +485,7 @@ export function createRepositories(db) {
     listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, deleteAccount, updateMaildomainHost,
     createJob, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
-    stopCampaign, resumeCampaign, updateCampaignLabelPrefix, completeCampaign, recordCampaignRun,
+    stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
     getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
     getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,

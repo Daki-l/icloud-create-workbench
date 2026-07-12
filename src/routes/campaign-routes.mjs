@@ -17,6 +17,9 @@ export function createCampaignRouter(campaignService) {
   /** 修改目标后续批次使用的标签前缀。 */
   router.patch("/:id", (req, res) => res.json(campaignService.updateLabelPrefix(req.params.id, req.body || {})));
 
+  /** 删除生产目标但保留邮箱和批次历史。 */
+  router.delete("/:id", (req, res) => res.json(campaignService.deleteCampaign(req.params.id)));
+
   /** 停止后续自动批次。 */
   router.post("/:id/stop", (req, res) => res.json(campaignService.stopCampaign(req.params.id)));
 
