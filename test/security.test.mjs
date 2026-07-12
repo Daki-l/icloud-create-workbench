@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
-import { decryptSecret, encryptSecret, hashPassword, maskAppleId, verifyPassword } from "../src/security.mjs";
+import { decryptSecret, encryptSecret, hashPassword, maskAppleId, verifyPassword, verifyPlainPassword } from "../src/security.mjs";
+
+test("环境变量中的明文密码可以验证正确密码并拒绝错误密码", () => {
+  assert.equal(verifyPlainPassword("a-very-strong-password", "a-very-strong-password"), true);
+  assert.equal(verifyPlainPassword("wrong-password", "a-very-strong-password"), false);
+});
 
 test("scrypt 密码哈希可以验证正确密码并拒绝错误密码", () => {
   const hash = hashPassword("a-very-strong-password");

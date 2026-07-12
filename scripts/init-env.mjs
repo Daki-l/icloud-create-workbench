@@ -4,7 +4,6 @@ import { writeFile } from "node:fs/promises";
 import readline from "node:readline/promises";
 import { emitKeypressEvents } from "node:readline";
 import { stdin, stdout } from "node:process";
-import { hashPassword } from "../src/security.mjs";
 
 /** 读取普通终端输入，并允许环境变量用于自动化初始化。 */
 async function ask(terminal, question, fallback = "") {
@@ -72,7 +71,7 @@ async function main() {
     terminal.close();
     const password = process.env.SETUP_PASSWORD || await askHidden("管理员密码");
     if (password.length < 10) throw new Error("管理员密码至少需要 10 位");
-    const content = `NODE_ENV=production\nHOST=0.0.0.0\nPORT=4173\nAPP_ORIGIN=${origin.replace(/\/$/, "")}\n\nADMIN_USERNAME=${username}\nADMIN_PASSWORD_HASH=${hashPassword(password)}\nJWT_SECRET=${randomSecret()}\nJWT_EXPIRES_IN=8h\nCOOKIE_SECURE=false\n\nDATA_ENCRYPTION_KEY=${randomSecret(32)}\nDATABASE_PATH=/app/data/workbench.db\nGENERATION_BATCH_LIMIT=5\nGENERATION_COOLDOWN_MINUTES=60\nGENERATION_TARGET_DEFAULT=700\nGENERATION_RETRY_MINUTES=5\nINBOX_SYNC_INTERVAL_SECONDS=30\nINBOX_SYNC_CONCURRENCY=2\nPUBLIC_MAIL_RATE_LIMIT=60\nLOG_LEVEL=info\nPYTHON_COMMAND=python\nPYTHON_BRIDGE=./python/hme_bridge.py\n`;
+    const content = `NODE_ENV=production\nHOST=0.0.0.0\nPORT=4173\nAPP_ORIGIN=${origin.replace(/\/$/, "")}\n\nADMIN_USERNAME=${username}\nADMIN_PASSWORD=${JSON.stringify(password)}\nJWT_SECRET=${randomSecret()}\nJWT_EXPIRES_IN=8h\nCOOKIE_SECURE=false\n\nDATA_ENCRYPTION_KEY=${randomSecret(32)}\nDATABASE_PATH=/app/data/workbench.db\nGENERATION_BATCH_LIMIT=5\nGENERATION_COOLDOWN_MINUTES=60\nGENERATION_TARGET_DEFAULT=700\nGENERATION_RETRY_MINUTES=5\nINBOX_SYNC_INTERVAL_SECONDS=30\nINBOX_SYNC_CONCURRENCY=2\nPUBLIC_MAIL_RATE_LIMIT=60\nLOG_LEVEL=info\nPYTHON_COMMAND=python\nPYTHON_BRIDGE=./python/hme_bridge.py\n`;
     await writeFile(".env", content, { encoding: "utf8", mode: 0o600 });
     stdout.write(".env 已生成。请勿提交或分享该文件。\n");
   } finally {

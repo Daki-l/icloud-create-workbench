@@ -19,15 +19,24 @@ function requireSecret(name, minimumLength) {
   return value;
 }
 
+/** 读取可直接用于登录的管理员明文密码。 */
+function readAdminPassword() {
+  const value = String(process.env.ADMIN_PASSWORD || "");
+  if (value && value.length < 10) throw new Error("ADMIN_PASSWORD 长度至少为 10 位");
+  return value;
+}
+
 /** 读取并校验应用配置。 */
 export function loadConfig(overrides = {}) {
+  const adminPassword = readAdminPassword();
   const config = {
     nodeEnv: process.env.NODE_ENV || "development",
     host: process.env.HOST || "127.0.0.1",
     port: readInteger("PORT", 4173, 1, 65535),
     appOrigin: String(process.env.APP_ORIGIN || "http://127.0.0.1:4173").replace(/\/$/, ""),
     adminUsername: String(process.env.ADMIN_USERNAME || "admin").trim(),
-    adminPasswordHash: requireSecret("ADMIN_PASSWORD_HASH", 32),
+    adminPassword,
+    adminPasswordHash: adminPassword ? "" : requireSecret("ADMIN_PASSWORD_HASH", 32),
     jwtSecret: requireSecret("JWT_SECRET", 32),
     jwtExpiresIn: process.env.JWT_EXPIRES_IN || "8h",
     cookieSecure: String(process.env.COOKIE_SECURE || "false").toLowerCase() === "true",

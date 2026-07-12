@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
-import { hashPassword } from "../src/security.mjs";
 import { createApp } from "../src/app.mjs";
 
 /** 创建无需真实数据库和 Apple 调用的 API 测试应用。 */
@@ -9,7 +8,7 @@ function createTestApp() {
   const config = {
     appOrigin: "http://127.0.0.1:4173",
     adminUsername: "admin",
-    adminPasswordHash: hashPassword("correct-password"),
+    adminPassword: "correct-password",
     jwtSecret: "test-jwt-secret-that-is-long-enough-123456789",
     jwtExpiresIn: "8h",
     cookieSecure: false,

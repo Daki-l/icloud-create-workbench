@@ -26,6 +26,13 @@ export function verifyPassword(password, encodedHash) {
   }
 }
 
+/** 使用恒定时间比较校验环境变量中的明文管理员密码。 */
+export function verifyPlainPassword(password, expectedPassword) {
+  const actual = Buffer.from(String(password));
+  const expected = Buffer.from(String(expectedPassword));
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
 /** 将 Base64 密钥转换为固定 32 字节 AES 密钥。 */
 function decodeEncryptionKey(encodedKey) {
   const key = Buffer.from(encodedKey, "base64");

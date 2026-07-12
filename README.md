@@ -48,16 +48,16 @@ JSON 接口返回该隐私邮箱在本地数据库中的最新邮件；暂无邮
 
 ## Docker 部署
 
-服务器需要 Docker 与 Docker Compose。先生成环境文件：
+服务器只需要安装 Docker 与 Docker Compose。拉取代码后创建环境文件：
 
 ```bash
-npm install
-npm run init-env
+cp .env.example .env
+# 编辑 .env，至少填写 APP_ORIGIN、ADMIN_PASSWORD、JWT_SECRET 和 DATA_ENCRYPTION_KEY
 docker compose up -d --build
 docker compose ps
 ```
 
-初始化时将访问地址填写为 `http://服务器IP:4173`，然后打开该地址登录。真实 `.env`、数据库和 CK 不得提交。
+`ADMIN_PASSWORD` 直接填写至少 10 位的登录密码，不需要生成哈希。`JWT_SECRET` 可使用 `openssl rand -base64 48` 生成，`DATA_ENCRYPTION_KEY` 可使用 `openssl rand -base64 32` 生成。将 `APP_ORIGIN` 设置为 `http://服务器IP:4173` 或实际域名，然后打开该地址登录。真实 `.env`、数据库和 CK 不得提交。
 
 查看日志：
 

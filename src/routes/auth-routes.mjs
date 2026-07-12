@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
-import { sessionCookieOptions, signAdminToken, verifyAdminToken, verifyPassword } from "../security.mjs";
+import { sessionCookieOptions, signAdminToken, verifyAdminToken, verifyPassword, verifyPlainPassword } from "../security.mjs";
 
 /** 创建管理员鉴权路由。 */
 export function createAuthRouter(config) {
@@ -17,7 +17,10 @@ export function createAuthRouter(config) {
   /** 校验管理员凭据并设置 JWT Cookie。 */
   router.post("/login", loginLimiter, (req, res) => {
     const usernameOk = String(req.body?.username || "") === config.adminUsername;
-    const passwordOk = verifyPassword(req.body?.password || "", config.adminPasswordHash);
+    const password = req.body?.password || "";
+    const passwordOk = config.adminPassword
+      ? verifyPlainPassword(password, config.adminPassword)
+      : verifyPassword(password, config.adminPasswordHash);
     if (!usernameOk || !passwordOk) return res.status(401).json({ error: "用户名或密码错误" });
     res.cookie("workbench_admin", signAdminToken(config), sessionCookieOptions(config));
     res.json({ username: config.adminUsername });
