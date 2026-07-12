@@ -47,7 +47,9 @@ test("未登录时受保护 API 返回 401", async () => {
 test("管理页面要求登录但登录页和公开邮件页可匿名访问", async () => {
   const app = createTestApp();
   await request(app).get("/index.html").expect(302).expect("Location", "/login");
-  await request(app).get("/login").expect(200).expect("Content-Type", /html/);
+  const loginPage = await request(app).get("/login").expect(200).expect("Content-Type", /html/);
+  assert.match(loginPage.headers["cache-control"], /no-store/);
+  assert.match(loginPage.headers["cache-control"], /no-transform/);
   await request(app).get("/mail/example%40icloud.com/public-token").expect(200).expect("Content-Type", /html/);
 });
 

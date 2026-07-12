@@ -64,7 +64,8 @@ export const useMenus = () => {
   }
 
   function getHomeRoute() {
-    return globalStore.get(menusAtom).home;
+    // 登录切换期间菜单可能尚未生成，必须回退到配置首页，避免空路径递归解析。
+    return globalStore.get(menusAtom).home || getAdminLayoutsOptions().defaultHome;
   }
 
   return {

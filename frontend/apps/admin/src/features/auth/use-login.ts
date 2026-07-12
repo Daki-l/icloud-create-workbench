@@ -13,7 +13,7 @@ export function useInitLogin() {
 
   const { t } = useTranslation();
 
-  const { initAuth, setAuth } = useAuth();
+  const { initAuth } = useAuth();
 
   const navigate = useNavigate();
   const router = useRouter();
@@ -29,9 +29,8 @@ export function useInitLogin() {
       onError: () => {
         endLoading();
       },
-      onSuccess: async data => {
-        setAuth(data);
-
+      onSuccess: async () => {
+        // Cookie 写入后先初始化用户和菜单，避免首页为空时提前触发登录路由重定向。
         const info = await initAuth();
 
         if (info) {

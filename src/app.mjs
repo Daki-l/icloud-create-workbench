@@ -50,7 +50,12 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   app.get("/favicon.svg", (req, res) => res.sendFile(join(frontendDir, "favicon.svg")));
 
   /** 返回公开邮件或登录页面的 React 入口。 */
-  const sendFrontend = (req, res) => res.sendFile(join(frontendDir, "index.html"));
+  const sendFrontend = (req, res) => {
+    // 入口文件引用带哈希的构建资源，禁止缓存可避免部署后继续加载旧版本模块。
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0, no-transform");
+    res.setHeader("Pragma", "no-cache");
+    res.sendFile(join(frontendDir, "index.html"));
+  };
   app.get(["/login", "/login/", "/login.html", "/login-out"], sendFrontend);
   app.get("/mail/:email/:token", (req, res) => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
