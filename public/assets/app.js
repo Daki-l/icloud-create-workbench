@@ -210,7 +210,6 @@ async function handleClick(event) {
   const detail = event.target.closest("[data-action=detail], [data-account-open]"); if (detail) return openAccount(detail.dataset.accountOpen || detail.closest("[data-account-id]").dataset.accountId);
   const copy = event.target.closest("[data-email], [data-code]"); if (copy) { await navigator.clipboard.writeText(copy.dataset.email || copy.dataset.code); return toast("已复制"); }
   const copyValue = event.target.closest("[data-copy-value]"); if (copyValue) { await navigator.clipboard.writeText(copyValue.dataset.copyValue); return toast("已复制"); }
-  const copyTarget = event.target.closest("[data-copy-target]"); if (copyTarget) { const target = document.getElementById(copyTarget.dataset.copyTarget); await navigator.clipboard.writeText(target?.textContent || ""); return toast("代码已复制"); }
   const stop = event.target.closest("[data-campaign-stop]"); if (stop) return changeCampaign(stop.dataset.campaignStop, "stop");
   const resume = event.target.closest("[data-campaign-resume]"); if (resume) return changeCampaign(resume.dataset.campaignResume, "resume");
   const pager = event.target.closest("[data-page-kind]"); if (pager && !pager.disabled) {

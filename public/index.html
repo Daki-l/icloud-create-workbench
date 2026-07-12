@@ -61,30 +61,12 @@
       </section>
 
       <section class="view hidden" data-view="guide">
-        <div class="page-head"><div><p class="eyebrow">COOKIE GUIDE</p><h1>iCloud CK 获取指南</h1><p class="muted">使用浏览器开发者工具复制完整请求，避免遗漏 HttpOnly 登录字段。</p></div></div>
-        <section class="panel guide-warning"><h2>为什么不能只执行一段 JS？</h2><p>iCloud 的关键登录 Cookie 通常带有 <code>HttpOnly</code>。页面里的 JavaScript 无权读取这些字段，因此 <code>document.cookie</code> 输出的内容不完整，无法用于隐藏邮箱接口。</p></section>
+        <div class="page-head"><div><p class="eyebrow">COOKIE GUIDE</p><h1>iCloud CK 获取指南</h1><p class="muted">登录 iCloud 后，从浏览器开发者工具复制隐藏邮箱请求。</p></div></div>
         <div class="guide-grid">
           <section class="panel guide-step"><span class="step-number">1</span><h2>登录 iCloud</h2><p>全球区打开 iCloud+，中国区使用 iCloud 中国站。完成双重验证后进入“隐藏邮件地址”。</p><div class="copy-line"><code>https://www.icloud.com/icloudplus/</code><button class="ghost" data-copy-value="https://www.icloud.com/icloudplus/">复制</button></div><div class="copy-line"><code>https://www.icloud.com.cn/icloudplus/</code><button class="ghost" data-copy-value="https://www.icloud.com.cn/icloudplus/">复制</button></div></section>
           <section class="panel guide-step"><span class="step-number">2</span><h2>定位完整请求</h2><p>按 F12 打开开发者工具，进入 Network，勾选 Preserve log，然后点击“隐藏邮件地址”。</p><p>在过滤框输入：</p><div class="copy-line"><code>maildomainws</code><button class="ghost" data-copy-value="maildomainws">复制</button></div><p>优先选择路径包含 <code>/v2/hme/list</code> 或 <code>/v1/hme/</code> 的请求。</p></section>
           <section class="panel guide-step"><span class="step-number">3</span><h2>复制并导入</h2><p>右键该请求，选择 Copy → Copy as cURL。回到“CK 账号”，点击“导入 CK”，直接粘贴整段 cURL。</p><button class="primary" data-go="accounts">前往 CK 账号</button></section>
         </div>
-        <section class="panel"><div class="section-head"><div><h2>控制台诊断 JS</h2><p class="muted">这段代码只能检查页面脚本可见的 Cookie，并证明关键 HttpOnly 字段是否缺失；不能代替 Copy as cURL。</p></div><button class="ghost" data-copy-target="cookieDiagnosticCode">复制代码</button></div><pre id="cookieDiagnosticCode"><code>(() =&gt; {
-  const cookie = document.cookie;
-  const required = [
-    "X-APPLE-DS-WEB-SESSION-TOKEN",
-    "X-APPLE-WEBAUTH-TOKEN",
-    "X-APPLE-WEBAUTH-PCS-Mail"
-  ];
-  const result = required.map(name =&gt; ({
-    name,
-    visible: cookie.includes(`${name}=`)
-  }));
-  console.log("页面 JS 可见 Cookie：", cookie);
-  console.table(result);
-  console.warn("缺失字段属于 HttpOnly 时，请从 Network 复制请求为 cURL。");
-  if (typeof copy === "function") copy(cookie);
-  return result;
-})();</code></pre></section>
       </section>
     </main>
   </div>

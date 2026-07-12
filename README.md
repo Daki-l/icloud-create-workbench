@@ -19,14 +19,6 @@
 
 ### 推荐方法：Network 复制为 cURL
 
-页面 JavaScript 无法读取完整 iCloud CK。关键字段通常带有 `HttpOnly`，因此 `document.cookie`、Cookie Store API、书签脚本都无法拿到以下必要字段：
-
-```text
-X-APPLE-DS-WEB-SESSION-TOKEN
-X-APPLE-WEBAUTH-TOKEN
-X-APPLE-WEBAUTH-PCS-Mail
-```
-
 请按下面步骤获取：
 
 1. 浏览器打开 `https://www.icloud.com/icloudplus/`。中国区使用 `https://www.icloud.com.cn/icloudplus/`。
@@ -38,31 +30,7 @@ X-APPLE-WEBAUTH-PCS-Mail
 7. 右键请求，选择 `Copy` → `Copy as cURL`。
 8. 打开控制台的“CK 账号”页面，点击“导入 CK”，粘贴完整 cURL 并提交。
 
-控制台内置 `/guide` 页面，提供相同指引、复制按钮和 Cookie 可见性诊断脚本。
-
-### 控制台诊断脚本
-
-下面脚本只能检查页面 JavaScript 能看到的 Cookie。它会显示关键字段是否因 `HttpOnly` 而不可见，不能替代 Network 的 `Copy as cURL`：
-
-```javascript
-(() => {
-  const cookie = document.cookie;
-  const required = [
-    "X-APPLE-DS-WEB-SESSION-TOKEN",
-    "X-APPLE-WEBAUTH-TOKEN",
-    "X-APPLE-WEBAUTH-PCS-Mail"
-  ];
-  const result = required.map(name => ({
-    name,
-    visible: cookie.includes(`${name}=`)
-  }));
-  console.log("页面 JS 可见 Cookie：", cookie);
-  console.table(result);
-  console.warn("缺失字段属于 HttpOnly 时，请从 Network 复制请求为 cURL。");
-  if (typeof copy === "function") copy(cookie);
-  return result;
-})();
-```
+控制台内置 `/guide` 页面，提供相同指引和复制按钮。
 
 ## Docker 部署
 
