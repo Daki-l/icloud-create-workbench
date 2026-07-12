@@ -24,7 +24,6 @@ import { Route as adminGuideIndexRouteImport } from './../../pages/(admin)/guide
 import { Route as adminAddressesIndexRouteImport } from './../../pages/(admin)/addresses/index'
 import { Route as adminAccountsIndexRouteImport } from './../../pages/(admin)/accounts/index'
 import { Route as MailEmailTokenRouteImport } from './../../pages/mail/$email/$token'
-import { Route as adminAddressesIdRouteImport } from './../../pages/(admin)/addresses/$id'
 
 const adminLayoutRoute = adminLayoutRouteImport.update({
   id: '/(admin)',
@@ -100,11 +99,6 @@ const MailEmailTokenRoute = MailEmailTokenRouteImport.update({
   path: '/mail/$email/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const adminAddressesIdRoute = adminAddressesIdRouteImport.update({
-  id: '/addresses/$id',
-  path: '/addresses/$id',
-  getParentRoute: () => adminLayoutRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -113,7 +107,6 @@ export interface FileRoutesByFullPath {
   '/403': typeof errors403Route
   '/404': typeof errors404Route
   '/500': typeof errors500Route
-  '/addresses/$id': typeof adminAddressesIdRoute
   '/mail/$email/$token': typeof MailEmailTokenRoute
   '/accounts/': typeof adminAccountsIndexRoute
   '/addresses/': typeof adminAddressesIndexRoute
@@ -129,7 +122,6 @@ export interface FileRoutesByTo {
   '/403': typeof errors403Route
   '/404': typeof errors404Route
   '/500': typeof errors500Route
-  '/addresses/$id': typeof adminAddressesIdRoute
   '/mail/$email/$token': typeof MailEmailTokenRoute
   '/accounts': typeof adminAccountsIndexRoute
   '/addresses': typeof adminAddressesIndexRoute
@@ -148,7 +140,6 @@ export interface FileRoutesById {
   '/(errors)/403': typeof errors403Route
   '/(errors)/404': typeof errors404Route
   '/(errors)/500': typeof errors500Route
-  '/(admin)/addresses/$id': typeof adminAddressesIdRoute
   '/mail/$email/$token': typeof MailEmailTokenRoute
   '/(admin)/accounts/': typeof adminAccountsIndexRoute
   '/(admin)/addresses/': typeof adminAddressesIndexRoute
@@ -167,7 +158,6 @@ export interface FileRouteTypes {
     | '/403'
     | '/404'
     | '/500'
-    | '/addresses/$id'
     | '/mail/$email/$token'
     | '/accounts/'
     | '/addresses/'
@@ -183,7 +173,6 @@ export interface FileRouteTypes {
     | '/403'
     | '/404'
     | '/500'
-    | '/addresses/$id'
     | '/mail/$email/$token'
     | '/accounts'
     | '/addresses'
@@ -201,7 +190,6 @@ export interface FileRouteTypes {
     | '/(errors)/403'
     | '/(errors)/404'
     | '/(errors)/500'
-    | '/(admin)/addresses/$id'
     | '/mail/$email/$token'
     | '/(admin)/accounts/'
     | '/(admin)/addresses/'
@@ -330,18 +318,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MailEmailTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/(admin)/addresses/$id': {
-      id: '/(admin)/addresses/$id'
-      path: '/addresses/$id'
-      fullPath: '/addresses/$id'
-      preLoaderRoute: typeof adminAddressesIdRouteImport
-      parentRoute: typeof adminLayoutRoute
-    }
   }
 }
 
 interface adminLayoutRouteChildren {
-  adminAddressesIdRoute: typeof adminAddressesIdRoute
   adminAccountsIndexRoute: typeof adminAccountsIndexRoute
   adminAddressesIndexRoute: typeof adminAddressesIndexRoute
   adminGuideIndexRoute: typeof adminGuideIndexRoute
@@ -351,7 +331,6 @@ interface adminLayoutRouteChildren {
 }
 
 const adminLayoutRouteChildren: adminLayoutRouteChildren = {
-  adminAddressesIdRoute: adminAddressesIdRoute,
   adminAccountsIndexRoute: adminAccountsIndexRoute,
   adminAddressesIndexRoute: adminAddressesIndexRoute,
   adminGuideIndexRoute: adminGuideIndexRoute,

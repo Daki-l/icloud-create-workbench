@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from 'antd';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { useState } from 'react';
 import type { Key } from 'react';
 
@@ -12,7 +12,6 @@ interface PublicLinks { apiUrl: string; token: string; viewerUrl: string }
 
 /** 渲染邮箱库存、批量状态、邮件与开放链接操作。 */
 const AddressesPage = () => {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ accountId: '', search: '', state: '' });
@@ -61,7 +60,6 @@ const AddressesPage = () => {
           { title: '状态', dataIndex: 'state', render: value => <Tag color={value === 'unused' ? 'green' : value === 'used' ? 'blue' : 'red'}>{value}</Tag> },
           { title: '邮件', dataIndex: 'messageCount', render: (value, row) => <Space>{value || 0}{row.latestCode ? <Tag color="blue">{row.latestCode}</Tag> : null}</Space> },
           { title: '操作', width: 280, render: (_, row) => <Space wrap>
-            <Button size="small" onClick={() => navigate({ to: '/addresses/$id', params: { id: row.id } })}>详情</Button>
             <Button size="small" onClick={() => setMailAddress(row)}>邮件</Button>
             <Button size="small" type="primary" onClick={() => publicMutation.mutate(row.id)}>{row.publicAccessEnabled ? '重置链接' : '开放链接'}</Button>
             {row.publicAccessEnabled ? <Popconfirm title="撤销后旧链接立即失效" onConfirm={() => revokeAccess(row.id)}><Button danger size="small">撤销</Button></Popconfirm> : null}

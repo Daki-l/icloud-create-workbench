@@ -20,6 +20,7 @@ test("旧版 IMAP 配置表可先补字段再创建同步索引", () => {
     mailbox TEXT,
     updated_at TEXT
   )`);
+  legacy.prepare("INSERT INTO account_inbox_configs (account_id) VALUES (?)").run("legacy-account");
   legacy.close();
 
   const migrated = createDatabase(databasePath);
@@ -27,6 +28,8 @@ test("旧版 IMAP 配置表可先补字段再创建同步索引", () => {
   const messageColumns = migrated.pragma("table_info(inbox_messages)").map(column => column.name);
   const indexes = migrated.pragma("index_list(account_inbox_configs)").map(index => index.name);
   assert.ok(columns.includes("next_sync_at"));
+  assert.equal(migrated.prepare("SELECT html_backfill_done FROM account_inbox_configs WHERE account_id = ?")
+    .get("legacy-account").html_backfill_done, 0);
   assert.ok(messageColumns.includes("body_html"));
   assert.ok(indexes.includes("idx_inbox_configs_due"));
   migrated.close();

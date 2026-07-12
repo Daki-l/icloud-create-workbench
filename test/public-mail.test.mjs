@@ -51,10 +51,20 @@ test("公开接口返回最新纯文本邮件，错误或撤销密钥统一返�
   const context = createContext();
   try {
     const access = context.publicMailService.createAccess(context.address.id);
-    context.repositories.insertMessage(context.address.accountId, { uid: "public:1", recipient: context.address.email,
+    const inserted = context.repositories.insertMessage(context.address.accountId, { uid: "public:1", recipient: context.address.email,
+      subject: "验证码", sender: "sender@example.com", code: "654321", preview: "最新邮件",
+      bodyText: "您的验证码是 654321", bodyHtml: "",
+      receivedAt: new Date().toISOString() });
+    const backfilled = context.repositories.insertMessage(context.address.accountId, { uid: "public:1", recipient: context.address.email,
       subject: "验证码", sender: "sender@example.com", code: "654321", preview: "最新邮件",
       bodyText: "您的验证码是 654321", bodyHtml: "<strong>您的验证码是 654321</strong>",
-      receivedAt: new Date().toISOString() });
+      receivedAt: new Date().toISOString() }, { updateOnly: true });
+    const ignoredHistory = context.repositories.insertMessage(context.address.accountId, { uid: "public:older", recipient: context.address.email,
+      subject: "旧邮件", sender: "sender@example.com", bodyText: "不应新增", bodyHtml: "<p>不应新增</p>" }, { updateOnly: true });
+    assert.equal(inserted, true);
+    assert.equal(backfilled, false);
+    assert.equal(ignoredHistory, false);
+    assert.equal(context.repositories.pageAddressMessages(context.address.id, 1, 20).total, 1);
     const path = new URL(access.apiUrl).pathname;
     const response = await request(context.app).get(path).expect(200);
     assert.equal(response.body.message.code, "654321");

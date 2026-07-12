@@ -43,6 +43,7 @@ test("每条 CK 保存各自独立的 IMAP 配置", () => {
     context.repositories.saveInboxConfig(first.id, { host: "imap.first.test", port: 993, secure: true, email: "first@test", passwordEncrypted: "one", mailbox: "INBOX" });
     context.repositories.saveInboxConfig(second.id, { host: "imap.second.test", port: 993, secure: true, email: "second@test", passwordEncrypted: "two", mailbox: "Codes" });
     assert.equal(context.repositories.getInboxConfigInternal(first.id).host, "imap.first.test");
+    assert.equal(context.repositories.getInboxConfigInternal(first.id).html_backfill_done, 1);
     assert.equal(context.repositories.getInboxConfigInternal(second.id).host, "imap.second.test");
     assert.notEqual(context.repositories.getInboxConfigInternal(first.id).password_encrypted, context.repositories.getInboxConfigInternal(second.id).password_encrypted);
   } finally { context.cleanup(); }

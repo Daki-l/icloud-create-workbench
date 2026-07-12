@@ -102,6 +102,7 @@ export function createDatabase(databasePath) {
       last_sync_at TEXT,
       next_sync_at TEXT,
       last_error TEXT,
+      html_backfill_done INTEGER NOT NULL DEFAULT 1,
       updated_at TEXT,
       FOREIGN KEY(account_id) REFERENCES icloud_accounts(id)
     );
@@ -147,7 +148,8 @@ export function createDatabase(databasePath) {
     ["uid_validity", "ALTER TABLE account_inbox_configs ADD COLUMN uid_validity TEXT"],
     ["last_sync_at", "ALTER TABLE account_inbox_configs ADD COLUMN last_sync_at TEXT"],
     ["next_sync_at", "ALTER TABLE account_inbox_configs ADD COLUMN next_sync_at TEXT"],
-    ["last_error", "ALTER TABLE account_inbox_configs ADD COLUMN last_error TEXT"]
+    ["last_error", "ALTER TABLE account_inbox_configs ADD COLUMN last_error TEXT"],
+    ["html_backfill_done", "ALTER TABLE account_inbox_configs ADD COLUMN html_backfill_done INTEGER NOT NULL DEFAULT 0"]
   ];
   for (const [name, sql] of inboxMigrations) {
     if (!configColumns.some(column => column.name === name)) db.exec(sql);

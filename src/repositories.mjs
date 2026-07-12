@@ -406,6 +406,12 @@ export function createRepositories(db) {
       .run(new Date().toISOString(), new Date().toISOString(), accountId);
   }
 
+  /** 标记现有邮件 HTML 一次性回填已经完成。 */
+  function completeInboxHtmlBackfill(accountId) {
+    db.prepare("UPDATE account_inbox_configs SET html_backfill_done = 1, updated_at = ? WHERE account_id = ?")
+      .run(new Date().toISOString(), accountId);
+  }
+
   /** 保存全局 IMAP 配置。 */
   function saveInboxConfig(accountId, input) {
     db.prepare(`INSERT INTO account_inbox_configs (account_id, host, port, secure, email, password_encrypted, mailbox, updated_at)
@@ -417,16 +423,25 @@ export function createRepositories(db) {
   }
 
   /** 写入一封同步到的邮件。 */
-  function insertMessage(accountId, message) {
+  function insertMessage(accountId, message, options = {}) {
     const address = message.recipient
       ? db.prepare("SELECT id FROM hidden_addresses WHERE account_id = ? AND lower(email) = lower(?)").get(accountId, message.recipient)
       : null;
-    return db.prepare(`INSERT OR IGNORE INTO inbox_messages
+    const existing = db.prepare("SELECT id FROM inbox_messages WHERE message_uid = ?").get(message.uid);
+    if (options.updateOnly && !existing) return false;
+    const result = db.prepare(`INSERT INTO inbox_messages
       (id, account_id, address_id, message_uid, subject, sender, code, preview, body_text, body_html, received_at, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(message_uid) DO UPDATE SET account_id = excluded.account_id,
+        address_id = COALESCE(excluded.address_id, inbox_messages.address_id), subject = excluded.subject,
+        sender = excluded.sender, code = excluded.code, preview = excluded.preview,
+        body_text = excluded.body_text,
+        body_html = CASE WHEN excluded.body_html <> '' THEN excluded.body_html ELSE inbox_messages.body_html END,
+        received_at = excluded.received_at`)
       .run(randomUUID(), accountId, address?.id || null, message.uid, message.subject || "", message.sender || "",
         message.code || "", message.preview || "", message.bodyText || "", message.bodyHtml || "", message.receivedAt || "",
-        new Date().toISOString()).changes > 0;
+        new Date().toISOString());
+    return !existing && result.changes > 0;
   }
 
   /** 查询最近同步的邮件。 */
@@ -454,7 +469,7 @@ export function createRepositories(db) {
     stopCampaign, resumeCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
     getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
-    getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState,
+    getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,
     saveInboxConfig, insertMessage, listMessages, pageMessages
   };
 }

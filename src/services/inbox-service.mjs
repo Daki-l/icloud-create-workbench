@@ -79,7 +79,7 @@ export function createInboxService({ config, repositories }) {
   }
 
   /** 解析并保存 IMAP 拉取到的一封邮件。 */
-  async function saveMessage(accountId, mailbox, message) {
+  async function saveMessage(accountId, mailbox, message, updateOnly = false) {
     const parsed = await simpleParser(message.source);
     const bodyText = String(parsed.text || "").slice(0, 100_000);
     const bodyHtml = typeof parsed.html === "string" ? parsed.html.slice(0, 300_000) : "";
@@ -95,7 +95,7 @@ export function createInboxService({ config, repositories }) {
       bodyText,
       bodyHtml,
       receivedAt: (parsed.date || message.internalDate || new Date()).toISOString()
-    });
+    }, { updateOnly });
   }
 
   /** 连接 IMAP 并按 UID 增量同步邮件。 */
@@ -115,6 +115,7 @@ export function createInboxService({ config, repositories }) {
     let scanned = 0;
     let lastUid = Number(stored.last_uid || 0);
     let uidValidity = String(stored.uid_validity || "");
+    const needsHtmlBackfill = !Boolean(stored.html_backfill_done);
     try {
       await client.connect();
       const lock = await client.getMailboxLock(stored.mailbox || "INBOX");
@@ -124,23 +125,27 @@ export function createInboxService({ config, repositories }) {
         if (uidValidity && currentValidity && uidValidity !== currentValidity) lastUid = 0;
         uidValidity = currentValidity;
         if (!total) {
+          if (needsHtmlBackfill) repositories.completeInboxHtmlBackfill(accountId);
           repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
           return { added: 0, scanned: 0 };
         }
         const uidNext = Number(client.mailbox?.uidNext || 0);
-        if (lastUid > 0 && uidNext > 0 && lastUid >= uidNext - 1) {
+        if (!needsHtmlBackfill && lastUid > 0 && uidNext > 0 && lastUid >= uidNext - 1) {
           repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
           return { added: 0, scanned: 0 };
         }
         const query = { uid: true, source: true, envelope: true, internalDate: true };
-        const range = lastUid > 0 ? `${lastUid + 1}:*` : `${Math.max(1, total - 99)}:*`;
-        const options = lastUid > 0 ? { uid: true } : undefined;
+        const range = needsHtmlBackfill
+          ? `${Math.max(1, total - 499)}:*`
+          : lastUid > 0 ? `${lastUid + 1}:*` : `${Math.max(1, total - 99)}:*`;
+        const options = !needsHtmlBackfill && lastUid > 0 ? { uid: true } : undefined;
         for await (const message of client.fetch(range, query, options)) {
           scanned++;
           lastUid = Math.max(lastUid, Number(message.uid || 0));
-          const inserted = await saveMessage(accountId, stored.mailbox || "INBOX", message);
+          const inserted = await saveMessage(accountId, stored.mailbox || "INBOX", message, needsHtmlBackfill);
           if (inserted) added++;
         }
+        if (needsHtmlBackfill) repositories.completeInboxHtmlBackfill(accountId);
         repositories.updateInboxSyncState(accountId, { lastUid, uidValidity, lastSyncAt: new Date().toISOString(), nextSyncAt: nextSyncAt(), lastError: "" });
         return { added, scanned };
       } finally {
