@@ -1,22 +1,12 @@
 import { useLoading } from '@skyroc/hooks';
-import { useNavigate, useRouter, useSearch } from '@tanstack/react-router';
+import { useSearch } from '@tanstack/react-router';
 
 import { useLoginMutation } from '@/service/api';
-import { localStg } from '@/utils/storage';
-
-import { useAuth } from './use-auth';
 
 export function useInitLogin() {
   const { endLoading, loading, startLoading } = useLoading();
 
   const search = useSearch({ from: '/(auth)/login/' });
-
-  const { t } = useTranslation();
-
-  const { initAuth } = useAuth();
-
-  const navigate = useNavigate();
-  const router = useRouter();
 
   const { mutate: toLogin } = useLoginMutation();
 
@@ -30,36 +20,8 @@ export function useInitLogin() {
         endLoading();
       },
       onSuccess: async () => {
-        // Cookie 写入后先初始化用户和菜单，避免首页为空时提前触发登录路由重定向。
-        const info = await initAuth();
-
-        if (info) {
-          await router.invalidate();
-
-          const lastLoginUserId = localStg.get('lastLoginUserId');
-
-          let needRedirect = redirect;
-
-          if (!lastLoginUserId || lastLoginUserId !== info.userId) {
-            needRedirect = false;
-
-            localStg.remove('globalTabs');
-            localStg.remove('lastLoginUserId');
-          }
-
-          if (needRedirect) {
-            await navigate({ to: search.redirect || '/', replace: true });
-          } else {
-            await navigate({ to: '/', replace: true });
-          }
-
-          showSuccessNotification({
-            description: t('page.login.common.welcomeBack', { userName: info.userName }),
-            title: t('page.login.common.loginSuccess')
-          });
-        } else {
-          endLoading();
-        }
+        // 使用完整页面导航重新读取 HttpOnly Cookie，避免 SPA 登录状态与路由上下文发生时序竞争。
+        window.location.replace(redirect ? search.redirect || '/' : '/');
       }
     });
   }
