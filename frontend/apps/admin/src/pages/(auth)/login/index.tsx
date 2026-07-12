@@ -18,8 +18,10 @@ const Login = () => {
   const { loading, login } = useInitLogin();
 
   const {
-    formRules: { pwd, userName: userNameRules }
+    createRequiredRule,
+    formRules: { userName: userNameRules }
   } = useAuthFormRules();
+  const passwordRules = [createRequiredRule(t('form.pwd.required'))];
 
   useKeyPress('enter', () => {
     form.submit();
@@ -33,8 +35,8 @@ const Login = () => {
           <AInput size="large" />
         </AForm.Item>
 
-        <AForm.Item name="password" rules={pwd}>
-          <AInput.Password autoComplete="password" size="large" />
+        <AForm.Item name="password" rules={passwordRules}>
+          <AInput.Password autoComplete="current-password" size="large" />
         </AForm.Item>
         <ASpace className="w-full" orientation="vertical" size={24}>
           <AButton block color="primary" htmlType="submit" loading={loading} shape="round" size="large" type="primary">
