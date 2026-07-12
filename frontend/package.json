@@ -4,8 +4,6 @@
   "scripts": {
     "build": "turbo run build",
     "clean": "turbo run clean",
-    "check:admin-template": "sa sync-admin-template --check",
-    "create:admin": "sa create-admin",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "test": "turbo run test",
@@ -14,7 +12,6 @@
     "format:check": "oxfmt --check",
     "test:ui": "vitest --ui",
     "test:watch": "turbo run test:watch",
-    "sync:admin-template": "sa sync-admin-template",
     "typecheck": "turbo run typecheck"
   },
   "devDependencies": {

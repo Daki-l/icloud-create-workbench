@@ -6,8 +6,7 @@ export default defineConfig({
     pipeline: {
       include: [/\.tsx($|\?)/],
       exclude: ['node_modules', 'dist']
-    },
-    filesystem: ['../../ui-kit/ui', '../../packages/web/ui/shadcn/src/**/*.{ts,tsx}']
+    }
   },
   presets: [
     presetWind3({ dark: 'class', variablePrefix: '', important: '.root', preflight: 'on-demand' }),

@@ -1,4 +1,3 @@
-import type { AdminDevtoolsConfig } from '@skyroc/web-admin-devtools';
 import { defaultThemeSettings } from '@skyroc/web-admin-theme';
 import type { NProgress } from 'nprogress';
 
@@ -53,21 +52,6 @@ function createConfig() {
 
     /** - 是否开发环境 */
     isDev: import.meta.env.DEV,
-    /** - 开发工具配置 */
-    devtools: {
-      jotai: {
-        name: import.meta.env.VITE_APP_TITLE,
-        panel: true,
-        position: 'bottom-left',
-        timeline: true,
-        triggerOffset: {
-          left: defaultThemeSettings.sider.width + 8
-        }
-      },
-      position: 'bottom-right',
-      query: true,
-      router: true
-    } satisfies AdminDevtoolsConfig,
     /** - 生成菜单的分类 key，来源于 setupAdminLayouts 使用的 menuCategories。 */
     genMenuLayouts: menuCategoryKeys,
     /** - 默认首页 */

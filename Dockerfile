@@ -8,7 +8,7 @@ FROM node:24-bookworm-slim AS frontend-builder
 WORKDIR /frontend
 RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
 COPY frontend ./
-RUN pnpm install --frozen-lockfile && pnpm --filter skyroc-admin build
+RUN pnpm install --frozen-lockfile --filter skyroc-admin... && pnpm --filter skyroc-admin build
 
 FROM python:3.12-slim-bookworm AS runtime
 COPY --from=node:24-bookworm-slim /usr/local/ /usr/local/

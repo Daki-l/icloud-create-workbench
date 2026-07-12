@@ -11,7 +11,7 @@ if (-not (Test-Path ".env")) {
 npm install
 Push-Location frontend
 try {
-  corepack pnpm install --frozen-lockfile
+  corepack pnpm install --frozen-lockfile --filter skyroc-admin...
   corepack pnpm --filter skyroc-admin build
 } finally {
   Pop-Location
