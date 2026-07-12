@@ -117,12 +117,9 @@ function guardResolvedUserInfo(options: AdminRouteGuardOptions, userInfo: Api.Au
 }
 
 export function guardAdminRoute(options: AdminRouteGuardOptions): AdminRouteGuardResult {
-  const { context, location } = options;
+  const { context } = options;
 
-  if (!context.isLoggedIn) {
-    throw redirect({ to: '/login', search: getLoginRedirectSearch(location, context) });
-  }
-
+  // 路由切换可能早于 Provider 更新登录布尔值，始终以实际用户初始化结果为准。
   const userInfo = resolveUserInfo(context);
 
   if (isPromise(userInfo)) {
