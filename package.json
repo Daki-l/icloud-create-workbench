@@ -1,0 +1,30 @@
+{
+  "name": "icloud-create-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.mjs",
+    "dev": "node --watch src/server.mjs",
+    "test": "node --test --test-concurrency=1",
+    "init-env": "node scripts/init-env.mjs",
+    "backup": "node scripts/backup-db.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.1",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
+    "imapflow": "^1.0.195",
+    "jsonwebtoken": "^9.0.2",
+    "mailparser": "^3.9.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4"
+  }
+}

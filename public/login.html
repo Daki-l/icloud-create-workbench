@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>管理员登录 - iCloud 生产控制台</title>
+  <link rel="stylesheet" href="/assets/styles.css?v=4">
+</head>
+<body class="login-page">
+  <main class="login-card">
+    <div class="brand-mark">iC</div>
+    <p class="eyebrow">PRIVATE WORKBENCH</p>
+    <h1>iCloud 生产控制台</h1>
+    <p class="muted">登录后管理 CK、隐藏邮箱库存与验证码。</p>
+    <form id="loginForm" class="stack">
+      <label>管理员账号<input name="username" autocomplete="username" required></label>
+      <label>管理员密码<input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="primary" type="submit">登录控制台</button>
+      <p id="loginError" class="error-text" role="alert"></p>
+    </form>
+  </main>
+  <script type="module" src="/assets/login.js?v=3"></script>
+</body>
+</html>

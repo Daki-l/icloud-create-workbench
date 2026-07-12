@@ -1,0 +1,14 @@
+.env
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+data/
+backups/
+logs/
+exports/
+*.db
+*.db-shm
+*.db-wal
+vendor/hidemyemail-generator/.git/
+mcds/

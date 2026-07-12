@@ -1,0 +1,26 @@
+services:
+  app:
+    build:
+      context: .
+    image: icloud-create-workbench:local
+    env_file:
+      - .env
+    ports:
+      - "4173:4173"
+    volumes:
+      - workbench-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4173/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  workbench-data:

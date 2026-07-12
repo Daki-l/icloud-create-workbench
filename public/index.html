@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iCloud 隐藏邮箱生产控制台</title>
+  <link rel="stylesheet" href="/assets/styles.css?v=5">
+</head>
+<body class="app-body">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><div class="brand-mark">iC</div><div><strong>iCloud 控制台</strong><span>生产工作台</span></div></div>
+    <nav class="side-nav">
+      <a href="/overview" data-route="overview">概览</a>
+      <a href="/accounts" data-route="accounts">CK 账号</a>
+      <a href="/tasks" data-route="tasks">生成任务</a>
+      <a href="/addresses" data-route="addresses">邮箱库存</a>
+      <a href="/inbox" data-route="inbox">收件与验证码</a>
+      <a href="/guide" data-route="guide">CK 获取指南</a>
+    </nav>
+    <div class="sidebar-user"><span id="adminName"></span><button id="logoutBtn" class="ghost">退出登录</button></div>
+  </aside>
+
+  <div class="app-main">
+    <header class="mobile-header"><strong>iCloud 生产控制台</strong><button id="menuBtn" class="ghost">菜单</button></header>
+    <main class="workspace">
+      <section class="view" data-view="overview">
+        <div class="page-head"><div><p class="eyebrow">OVERVIEW</p><h1>控制台概览</h1><p class="muted">查看账号、库存和最近任务状态。</p></div><button class="primary" data-go="tasks">＋ 创建生成任务</button></div>
+        <div class="overview-stats"><article><span>CK 账号</span><strong id="overviewAccounts">0</strong></article><article><span>邮箱库存</span><strong id="overviewAddresses">0</strong></article><article><span>未使用</span><strong id="overviewUnused">0</strong></article><article><span>生成任务</span><strong id="overviewJobs">0</strong></article></div>
+        <div class="dashboard-grid"><section class="panel"><div class="section-head"><h2>账号状态</h2><button class="ghost" data-go="accounts">管理账号</button></div><div id="overviewAccountList" class="compact-list"></div></section><section class="panel"><div class="section-head"><h2>最近任务</h2><button class="ghost" data-go="tasks">任务中心</button></div><div id="overviewJobList" class="job-list compact"></div></section></div>
+      </section>
+
+      <section class="view hidden" data-view="accounts">
+        <div class="page-head"><div><p class="eyebrow">ICLOUD ACCOUNTS</p><h1>CK 账号管理</h1><p class="muted">导入、检测、同步和维护多个 Apple ID。</p></div><button id="showImportBtn" class="primary">＋ 导入 CK</button></div>
+        <section id="importPanel" class="panel hidden">
+          <div class="section-head"><div><h2>导入 iCloud CK</h2><p class="muted">支持 Cookie 字符串、Cookie 请求头、Copy as cURL 和上游 Cookie 文件。</p></div><button id="hideImportBtn" class="ghost">关闭</button></div>
+          <form id="importForm" class="stack"><label>区域<select name="region"><option value="auto">自动检测</option><option value="global">全球区</option><option value="china">中国区</option></select></label><label>CK 内容<textarea name="cookie" rows="7" placeholder="CK 将加密保存在服务器数据库" required></textarea></label><button class="primary" type="submit">校验并导入</button></form>
+        </section>
+        <div class="section-head"><h2>账号列表</h2><button id="refreshBtn" class="ghost">刷新</button></div>
+        <div id="accountGrid" class="account-grid"></div><div id="emptyAccounts" class="empty hidden">尚未导入 CK。</div>
+        <section id="detailPanel" class="panel hidden">
+          <div class="section-head"><div><p class="eyebrow">ACCOUNT DETAIL</p><h2 id="detailTitle">账号详情</h2></div><button id="closeDetailBtn" class="ghost">关闭</button></div>
+          <div id="detailMeta" class="meta-grid"></div><p id="detailCooldown" class="cooldown-banner"></p>
+          <div class="account-actions"><button id="accountGenerateBtn" class="primary">为此账号创建任务</button><button id="syncBtn" class="secondary">同步 Apple 邮箱</button><button id="updateCookieBtn" class="secondary">更新 CK</button><button id="deleteAccountBtn" class="danger">删除 CK</button></div>
+        </section>
+      </section>
+
+      <section class="view hidden" data-view="tasks">
+        <div class="page-head"><div><p class="eyebrow">GENERATION JOBS</p><h1>生成任务中心</h1><p class="muted">选择 CK 后创建每批最多 5 个的生成任务。</p></div></div>
+        <div class="task-layout"><form id="taskForm" class="panel stack sticky-panel"><h2>创建生产目标</h2><label>选择 CK<select id="taskAccount" name="accountId" required></select></label><div class="form-row"><label>目标库存总数<input name="targetTotal" type="number" min="1" max="700" value="700"></label><label>每批生成<input name="batchSize" type="number" min="1" max="5" value="5"></label></div><label>标签前缀<input name="labelPrefix" value="changsheng" maxlength="24"></label><div id="taskAccountStatus" class="task-account-status"></div><button class="primary" type="submit">启动持续生产</button></form><div class="stack"><section class="panel"><div class="section-head"><h2>生产目标</h2><button id="refreshJobsBtn" class="ghost">刷新</button></div><div id="campaignList" class="campaign-list"></div></section><section class="panel"><div class="section-head"><h2>批次执行记录</h2><span id="jobTotal" class="muted"></span></div><div id="jobList" class="job-list"></div><div id="jobPagination" class="pagination"></div></section></div></div>
+      </section>
+
+      <section class="view hidden" data-view="addresses">
+        <div class="page-head"><div><p class="eyebrow">ADDRESS INVENTORY</p><h1>邮箱库存</h1><p class="muted">集中管理全部 CK 下的隐藏邮箱。</p></div><button id="exportBtn" class="ghost">导出 CSV</button></div>
+        <section class="panel"><div class="table-tools"><select id="accountFilter"><option value="">全部 CK</option></select><select id="stateFilter"><option value="">全部状态</option><option value="unused">未使用</option><option value="used">已使用</option><option value="trash">垃圾箱</option></select><input id="addressSearch" placeholder="搜索邮箱或标签"></div><div class="bulk-bar"><label class="checkbox"><input id="selectAllAddresses" type="checkbox"> 选择本页</label><span id="selectedCount" class="muted">已选 0 个</span><select id="batchState"><option value="used">批量标记已使用</option><option value="unused">批量标记未使用</option><option value="trash">批量移入垃圾箱</option></select><button id="applyBatchStateBtn" class="secondary">应用状态</button></div><div class="table-wrap"><table><thead><tr><th></th><th>邮箱</th><th>Apple ID</th><th>标签</th><th>状态</th><th>来源</th><th>创建时间</th></tr></thead><tbody id="addressRows"></tbody></table></div><div id="addressPagination" class="pagination"></div></section>
+      </section>
+
+      <section class="view hidden" data-view="inbox">
+        <div class="page-head"><div><p class="eyebrow">INBOX & CODES</p><h1>收件与验证码</h1><p class="muted">每条 CK 独立配置自己的 IMAP 接码邮箱。</p></div><button id="syncInboxBtn" class="secondary">同步当前 CK 邮件</button></div>
+        <section class="panel"><label class="inbox-account-select">当前 CK<select id="inboxAccount"></select></label><form id="inboxForm" class="inbox-form"><label>IMAP 主机<input name="host" placeholder="imap.example.com"></label><label>端口<input name="port" type="number" value="993"></label><label>邮箱<input name="email" type="email"></label><label>密码/授权码<input name="password" type="password" placeholder="留空表示不修改"></label><label>文件夹<input name="mailbox" value="INBOX"></label><label class="checkbox"><input name="secure" type="checkbox" checked> SSL/TLS</label><button class="secondary" type="submit">保存当前 CK 配置</button></form></section>
+        <section class="panel"><div class="section-head"><h2>最近邮件</h2><span id="messageTotal" class="muted"></span></div><div id="messageList" class="message-list"></div><div id="messagePagination" class="pagination"></div></section>
+      </section>
+
+      <section class="view hidden" data-view="guide">
+        <div class="page-head"><div><p class="eyebrow">COOKIE GUIDE</p><h1>iCloud CK 获取指南</h1><p class="muted">使用浏览器开发者工具复制完整请求，避免遗漏 HttpOnly 登录字段。</p></div></div>
+        <section class="panel guide-warning"><h2>为什么不能只执行一段 JS？</h2><p>iCloud 的关键登录 Cookie 通常带有 <code>HttpOnly</code>。页面里的 JavaScript 无权读取这些字段，因此 <code>document.cookie</code> 输出的内容不完整，无法用于隐藏邮箱接口。</p></section>
+        <div class="guide-grid">
+          <section class="panel guide-step"><span class="step-number">1</span><h2>登录 iCloud</h2><p>全球区打开 iCloud+，中国区使用 iCloud 中国站。完成双重验证后进入“隐藏邮件地址”。</p><div class="copy-line"><code>https://www.icloud.com/icloudplus/</code><button class="ghost" data-copy-value="https://www.icloud.com/icloudplus/">复制</button></div><div class="copy-line"><code>https://www.icloud.com.cn/icloudplus/</code><button class="ghost" data-copy-value="https://www.icloud.com.cn/icloudplus/">复制</button></div></section>
+          <section class="panel guide-step"><span class="step-number">2</span><h2>定位完整请求</h2><p>按 F12 打开开发者工具，进入 Network，勾选 Preserve log，然后点击“隐藏邮件地址”。</p><p>在过滤框输入：</p><div class="copy-line"><code>maildomainws</code><button class="ghost" data-copy-value="maildomainws">复制</button></div><p>优先选择路径包含 <code>/v2/hme/list</code> 或 <code>/v1/hme/</code> 的请求。</p></section>
+          <section class="panel guide-step"><span class="step-number">3</span><h2>复制并导入</h2><p>右键该请求，选择 Copy → Copy as cURL。回到“CK 账号”，点击“导入 CK”，直接粘贴整段 cURL。</p><button class="primary" data-go="accounts">前往 CK 账号</button></section>
+        </div>
+        <section class="panel"><div class="section-head"><div><h2>控制台诊断 JS</h2><p class="muted">这段代码只能检查页面脚本可见的 Cookie，并证明关键 HttpOnly 字段是否缺失；不能代替 Copy as cURL。</p></div><button class="ghost" data-copy-target="cookieDiagnosticCode">复制代码</button></div><pre id="cookieDiagnosticCode"><code>(() =&gt; {
+  const cookie = document.cookie;
+  const required = [
+    "X-APPLE-DS-WEB-SESSION-TOKEN",
+    "X-APPLE-WEBAUTH-TOKEN",
+    "X-APPLE-WEBAUTH-PCS-Mail"
+  ];
+  const result = required.map(name =&gt; ({
+    name,
+    visible: cookie.includes(`${name}=`)
+  }));
+  console.log("页面 JS 可见 Cookie：", cookie);
+  console.table(result);
+  console.warn("缺失字段属于 HttpOnly 时，请从 Network 复制请求为 cURL。");
+  if (typeof copy === "function") copy(cookie);
+  return result;
+})();</code></pre></section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <dialog id="cookieDialog"><form id="updateCookieForm" method="dialog" class="stack"><h2>更新 CK</h2><label>区域<select name="region"><option value="auto">自动检测</option><option value="global">全球区</option><option value="china">中国区</option></select></label><label>新 CK<textarea name="cookie" rows="7" required></textarea></label><div class="dialog-actions"><button value="cancel" class="ghost">取消</button><button value="default" class="primary">校验并更新</button></div></form></dialog>
+  <script type="module" src="/assets/app.js?v=5"></script>
+</body>
+</html>

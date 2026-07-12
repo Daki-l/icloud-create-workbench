@@ -1,0 +1,14 @@
+.git
+.env
+node_modules
+.venv
+data
+backups
+logs
+exports
+*.db*
+mcds
+vendor/hidemyemail-generator/.git
+vendor/hidemyemail-generator/docs
+vendor/hidemyemail-generator/tests
+vendor/hidemyemail-generator/.github

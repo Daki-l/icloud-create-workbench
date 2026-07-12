@@ -1,0 +1,34 @@
+import { loadConfig } from "./config.mjs";
+import { createDatabase } from "./db.mjs";
+import { createRepositories } from "./repositories.mjs";
+import { callPythonBridge } from "./python-bridge.mjs";
+import { createIcloudService } from "./services/icloud-service.mjs";
+import { createInboxService } from "./services/inbox-service.mjs";
+import { createCampaignService } from "./services/campaign-service.mjs";
+import { createApp } from "./app.mjs";
+
+/** 启动数据库、服务依赖和 HTTP 监听。 */
+function main() {
+  const config = loadConfig();
+  const db = createDatabase(config.databasePath);
+  const repositories = createRepositories(db);
+  const recovered = repositories.recoverRunningJobs();
+  if (recovered) console.warn(`已恢复 ${recovered} 个被中断的生成任务`);
+  const icloudService = createIcloudService({ config, repositories, callBridge: callPythonBridge });
+  const inboxService = createInboxService({ config, repositories });
+  const campaignService = createCampaignService({ config, repositories, icloudService });
+  campaignService.start();
+  const app = createApp({ config, repositories, icloudService, inboxService, campaignService });
+  const server = app.listen(config.port, config.host, () => {
+    console.log(`iCloud 生产控制台已启动：http://${config.host}:${config.port}`);
+  });
+  const shutdown = signal => {
+    console.log(`收到 ${signal}，正在关闭服务`);
+    campaignService.close();
+    server.close(() => { db.close(); process.exit(0); });
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+main();

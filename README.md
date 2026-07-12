@@ -1,0 +1,118 @@
+# iCloud 隐藏邮箱生产控制台
+
+这是一个单管理员、多 CK 的服务器控制台。Node.js 负责 Web、JWT、SQLite 和调度，Python 调用固定版本的 `hidemyemail-generator` 完成 iCloud 操作。
+
+## 功能
+
+- 管理员 JWT 登录，Cookie 使用 `HttpOnly + SameSite=Strict`
+- CK 与 IMAP 密码使用 AES-256-GCM 加密保存
+- 多 CK 工作台、账号检测和 Apple 邮箱同步
+- 自动验证 maildomain 分片，错误的用户分区主机名会回退到区域默认节点
+- 每条 CK 每批最多生成 5 个，成功后强制冷却 60 分钟
+- 持久化生产目标默认库存 700，可停止、继续并自动按冷却周期执行
+- 未使用、已使用、垃圾箱状态与 CSV 导出
+- 邮箱、批次记录和邮件分页，支持批量修改使用状态
+- 每条 CK 独立 IMAP 配置、验证码提取和邮件预览
+- Docker 镜像、SQLite 持久卷、健康检查和在线备份
+
+## 获取 iCloud CK
+
+### 推荐方法：Network 复制为 cURL
+
+页面 JavaScript 无法读取完整 iCloud CK。关键字段通常带有 `HttpOnly`，因此 `document.cookie`、Cookie Store API、书签脚本都无法拿到以下必要字段：
+
+```text
+X-APPLE-DS-WEB-SESSION-TOKEN
+X-APPLE-WEBAUTH-TOKEN
+X-APPLE-WEBAUTH-PCS-Mail
+```
+
+请按下面步骤获取：
+
+1. 浏览器打开 `https://www.icloud.com/icloudplus/`。中国区使用 `https://www.icloud.com.cn/icloudplus/`。
+2. 正常登录 Apple ID 并完成双重验证。
+3. 按 `F12` 打开开发者工具，进入 `Network`，勾选 `Preserve log`。
+4. 在 iCloud+ 页面点击“隐藏邮件地址”。
+5. 在 Network 过滤框输入 `maildomainws`。
+6. 找到路径包含 `/v2/hme/list` 或 `/v1/hme/` 的请求。
+7. 右键请求，选择 `Copy` → `Copy as cURL`。
+8. 打开控制台的“CK 账号”页面，点击“导入 CK”，粘贴完整 cURL 并提交。
+
+控制台内置 `/guide` 页面，提供相同指引、复制按钮和 Cookie 可见性诊断脚本。
+
+### 控制台诊断脚本
+
+下面脚本只能检查页面 JavaScript 能看到的 Cookie。它会显示关键字段是否因 `HttpOnly` 而不可见，不能替代 Network 的 `Copy as cURL`：
+
+```javascript
+(() => {
+  const cookie = document.cookie;
+  const required = [
+    "X-APPLE-DS-WEB-SESSION-TOKEN",
+    "X-APPLE-WEBAUTH-TOKEN",
+    "X-APPLE-WEBAUTH-PCS-Mail"
+  ];
+  const result = required.map(name => ({
+    name,
+    visible: cookie.includes(`${name}=`)
+  }));
+  console.log("页面 JS 可见 Cookie：", cookie);
+  console.table(result);
+  console.warn("缺失字段属于 HttpOnly 时，请从 Network 复制请求为 cURL。");
+  if (typeof copy === "function") copy(cookie);
+  return result;
+})();
+```
+
+## Docker 部署
+
+服务器需要 Docker 与 Docker Compose。先生成环境文件：
+
+```bash
+npm install
+npm run init-env
+docker compose build
+docker compose up -d
+docker compose ps
+```
+
+初始化时将访问地址填写为 `http://服务器IP:4173`，然后打开该地址登录。真实 `.env`、数据库和 CK 不得提交。
+
+查看日志：
+
+```bash
+docker compose logs -f app
+```
+
+更新服务：
+
+```bash
+docker compose build --pull
+docker compose up -d
+```
+
+## 数据备份
+
+容器内执行 SQLite 一致性备份：
+
+```bash
+docker compose exec app node scripts/backup-db.mjs /app/data/workbench-backup.db
+```
+
+再使用 `docker cp` 将备份文件取出。不要直接复制正在写入的数据库和 WAL 文件。
+
+## Windows 本地开发
+
+安装 Node.js 24、Python 3.12 后执行：
+
+```powershell
+npm install
+npm run init-env
+.\start.ps1
+```
+
+`start.ps1` 会自动把数据库路径切换为项目内的 `data/workbench.db`，不会写入 Windows 根目录。
+
+## HTTPS 升级
+
+接入 Nginx、Caddy 或负载均衡后，将 `APP_ORIGIN` 改为实际 HTTPS 地址，并设置 `COOKIE_SECURE=true`，然后重启容器。

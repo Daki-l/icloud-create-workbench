@@ -1,0 +1,58 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import request from "supertest";
+import { hashPassword } from "../src/security.mjs";
+import { createApp } from "../src/app.mjs";
+
+/** 创建无需真实数据库和 Apple 调用的 API 测试应用。 */
+function createTestApp() {
+  const config = {
+    appOrigin: "http://127.0.0.1:4173",
+    adminUsername: "admin",
+    adminPasswordHash: hashPassword("correct-password"),
+    jwtSecret: "test-jwt-secret-that-is-long-enough-123456789",
+    jwtExpiresIn: "8h",
+    cookieSecure: false
+  };
+  const repositories = {
+    listAccounts: () => [],
+    listAllJobs: () => [],
+    pageAllJobs: () => ({ rows: [], total: 0 }),
+    listAddresses: () => [],
+    listMessages: () => [],
+    getInboxConfigInternal: () => null
+  };
+  const icloudService = {};
+  const inboxService = { getConfig: () => ({ configured: false }) };
+  const campaignService = { listCampaigns: () => [] };
+  return createApp({ config, repositories, icloudService, inboxService, campaignService });
+}
+
+test("健康检查无需登录且不返回配置", async () => {
+  const response = await request(createTestApp()).get("/api/health").expect(200);
+  assert.deepEqual(response.body, { ok: true, service: "icloud-create-workbench" });
+});
+
+test("未登录时受保护 API 返回 401", async () => {
+  await request(createTestApp()).get("/api/icloud-accounts").expect(401);
+});
+
+test("可信来源登录后可以访问受保护 API", async () => {
+  const agent = request.agent(createTestApp());
+  const login = await agent.post("/api/auth/login")
+    .set("Origin", "http://127.0.0.1:4173")
+    .send({ username: "admin", password: "correct-password" })
+    .expect(200);
+  assert.match(login.headers["set-cookie"][0], /HttpOnly/);
+  await agent.get("/api/icloud-accounts").expect(200, { accounts: [] });
+  await agent.get("/api/generation-jobs").expect(200, {
+    jobs: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1 }
+  });
+});
+
+test("错误来源的修改请求被拒绝", async () => {
+  await request(createTestApp()).post("/api/auth/login")
+    .set("Origin", "http://evil.example")
+    .send({ username: "admin", password: "correct-password" })
+    .expect(403);
+});
