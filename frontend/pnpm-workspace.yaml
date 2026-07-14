@@ -178,6 +178,12 @@ catalogs:
 
   # ==================== UI 组件共享 ====================
   ui-shared:
+    # Astryx design system
+    '@astryxdesign/core': 0.1.4
+    '@astryxdesign/theme-neutral': 0.1.4
+    '@stylexjs/stylex': 0.18.3
+    'lucide-react': 1.24.0
+
     # Radix UI
     '@radix-ui/react-scroll-area': 1.2.10
     '@radix-ui/react-slot': 1.2.3

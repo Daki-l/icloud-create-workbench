@@ -21,6 +21,6 @@ test("AES-256-GCM 可以解密原文并拒绝篡改密文", () => {
   assert.throws(() => decryptSecret(`${encrypted.slice(0, -2)}AA`, key));
 });
 
-test("Apple ID 只返回脱敏形式", () => {
+test("Apple ID 脱敏工具保留邮箱域名", () => {
   assert.equal(maskAppleId("someone@example.com"), "so***@example.com");
 });

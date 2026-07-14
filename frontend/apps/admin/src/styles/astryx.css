@@ -1,0 +1,67 @@
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+html {
+  overflow-x: hidden;
+  text-autospace: normal;
+}
+
+body {
+  background: var(--color-background-body);
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-color: color-mix(in srgb, var(--color-text-secondary) 35%, transparent) transparent;
+  scrollbar-width: thin;
+}
+
+:root[data-astryx-theme='neutral'] {
+  --color-accent: light-dark(#0074e8, #5ca7ff);
+  --color-accent-muted: light-dark(#eaf4ff, #102c4c);
+  --color-text-accent: light-dark(#0066cc, #8bc1ff);
+  --color-icon-accent: light-dark(#0066cc, #8bc1ff);
+  --color-on-accent: #ffffff;
+}
+
+.workbench-page {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+}
+
+.workbench-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.workbench-side-nav * {
+  scrollbar-width: none;
+}
+
+.workbench-side-nav *::-webkit-scrollbar {
+  display: none;
+}
+
+.workbench-code {
+  overflow-wrap: anywhere;
+  font-family: var(--font-family-code);
+}
+
+.workbench-mail-frame {
+  width: 100%;
+  height: min(520px, 60vh);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background: #ffffff;
+}
+
+@media (max-width: 640px) {
+  .workbench-page {
+    min-width: 0;
+  }
+}

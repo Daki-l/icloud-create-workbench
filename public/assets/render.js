@@ -25,7 +25,7 @@ export function cooldownText(value) {
 export function renderAccounts(accounts) {
   return accounts.map(account => `
     <article class="account-card" data-account-id="${escapeHtml(account.id)}">
-      <div class="card-head"><span class="status-dot"></span><span class="pill">${escapeHtml(account.region === "china" ? "中国区" : "全球区")}</span></div>
+      <div class="card-head"><span class="status-dot"></span><span class="pill">${escapeHtml(account.status === "expired" ? "CK 已过期" : "CK 有效")}</span></div>
       <h3>${escapeHtml(account.appleIdMasked)}</h3><p class="muted">${escapeHtml(account.displayName || "未命名账号")}</p>
       <div class="stats"><div><strong>${account.addressCount || 0}</strong><span>邮箱总数</span></div><div><strong>${account.unusedCount || 0}</strong><span>未使用</span></div></div>
       <p class="cooldown">${escapeHtml(cooldownText(account.cooldownUntil))}</p>
@@ -35,7 +35,7 @@ export function renderAccounts(accounts) {
 
 /** 渲染账号基础信息。 */
 export function renderAccountMeta(account) {
-  const items = [["区域", account.region === "china" ? "中国区" : "全球区"], ["用户分区", account.userPartition || "—"], ["Maildomain", account.maildomainHost || "—"], ["最近检测", formatTime(account.lastCheckedAt)]];
+  const items = [["CK 状态", account.status === "expired" ? "已过期" : "有效"], ["区域", account.region === "china" ? "中国区" : "全球区"], ["用户分区", account.userPartition || "—"], ["Maildomain", account.maildomainHost || "—"], ["最近检测", formatTime(account.lastCheckedAt)]];
   return items.map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 

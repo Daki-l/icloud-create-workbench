@@ -4,8 +4,14 @@ import { Router } from "express";
 export function createAccountRouter({ repositories, icloudService }) {
   const router = Router();
 
-  /** 返回全部 CK 工作台摘要。 */
-  router.get("/", (req, res) => res.json({ accounts: repositories.listAccounts() }));
+  /** 返回全部 CK 摘要，并自动补齐历史账号的完整 Apple ID。 */
+  router.get("/", async (req, res) => {
+    let accounts = repositories.listAccounts();
+    const legacyAccounts = accounts.filter(account => account.appleIdMasked.includes("***"));
+    for (const account of legacyAccounts) await icloudService.checkCookie(account.id);
+    if (legacyAccounts.length) accounts = repositories.listAccounts();
+    res.json({ accounts });
+  });
 
   /** 导入并校验一条 CK。 */
   router.post("/import", async (req, res) => {
@@ -29,6 +35,9 @@ export function createAccountRouter({ repositories, icloudService }) {
     await icloudService.updateCookie(req.params.id, req.body?.cookie, req.body?.region || "auto");
     res.json({ account: repositories.getAccount(req.params.id) });
   });
+
+  /** 请求 Apple 检测指定 CK 当前是否已过期。 */
+  router.post("/:id/check", async (req, res) => res.json(await icloudService.checkCookie(req.params.id)));
 
   /** 软删除账号并清除加密 CK。 */
   router.delete("/:id", (req, res) => {

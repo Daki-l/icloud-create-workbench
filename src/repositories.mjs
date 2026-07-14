@@ -66,6 +66,12 @@ export function createRepositories(db) {
     return getAccountInternal(id);
   }
 
+  /** 将最近一次 Apple 请求失败的 CK 标记为已过期。 */
+  function markAccountExpired(id) {
+    const now = new Date().toISOString();
+    db.prepare(`UPDATE icloud_accounts SET apple_id_masked = CASE WHEN apple_id_masked LIKE '%***%' THEN '无法获取（CK 已过期）'
+      ELSE apple_id_masked END, status = 'expired', last_checked_at = ?, updated_at = ? WHERE id = ?`).run(now, now, id);
+  }
   /** 软删除账号并清除其加密 CK。 */
   function deleteAccount(id) {
     return db.prepare("UPDATE icloud_accounts SET status = 'deleted', cookie_encrypted = '', updated_at = ? WHERE id = ?")
@@ -391,7 +397,7 @@ export function createRepositories(db) {
       JOIN address_public_access p ON p.address_id = h.id
       WHERE lower(h.email) = lower(?) AND p.token_hash = ?`).get(email, tokenHash);
     if (!access) return null;
-    const message = db.prepare(`SELECT id, subject, sender, code, preview, body_text AS bodyText,
+    const message = db.prepare(`SELECT id, subject, sender, code, preview, body_text AS bodyText, body_html AS bodyHtml,
       received_at AS receivedAt FROM inbox_messages WHERE address_id = ? ORDER BY received_at DESC LIMIT 1`)
       .get(access.addressId) || null;
     db.prepare("UPDATE address_public_access SET last_access_at = ? WHERE address_id = ?")
@@ -482,7 +488,7 @@ export function createRepositories(db) {
   }
 
   return {
-    listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, deleteAccount, updateMaildomainHost,
+    listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, markAccountExpired, deleteAccount, updateMaildomainHost,
     createJob, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,

@@ -12,8 +12,10 @@ export interface Account {
   cooldownUntil?: string;
   displayName?: string;
   labelPrefix: string;
+  lastCheckedAt?: string;
   latestJobStatus?: string;
   region: string;
+  status: 'active' | 'expired';
   unusedCount: number;
 }
 

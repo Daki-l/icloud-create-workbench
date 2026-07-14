@@ -47,7 +47,7 @@ test("公开链接在无邮件时返回 message null，并带跨域与禁用缓�
   } finally { context.cleanup(); }
 });
 
-test("公开接口返回最新纯文本邮件，错误或撤销密钥统一返回 404", async () => {
+test("公开接口返回最新邮件的纯文本和 HTML，错误或撤销密钥统一返回 404", async () => {
   const context = createContext();
   try {
     const access = context.publicMailService.createAccess(context.address.id);
@@ -69,7 +69,7 @@ test("公开接口返回最新纯文本邮件，错误或撤销密钥统一返�
     const response = await request(context.app).get(path).expect(200);
     assert.equal(response.body.message.code, "654321");
     assert.equal(response.body.message.bodyText, "您的验证码是 654321");
-    assert.equal(response.body.message.bodyHtml, undefined);
+    assert.equal(response.body.message.bodyHtml, "<strong>您的验证码是 654321</strong>");
     const stored = context.repositories.getMessage(response.body.message.id);
     assert.equal(stored.bodyHtml, "<strong>您的验证码是 654321</strong>");
     await request(context.app).get(path.replace(access.token, "wrong-token-value-that-is-long-enough-123456")).expect(404);

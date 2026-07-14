@@ -24,7 +24,15 @@ function main() {
   campaignService.start();
   inboxSyncWorker.start();
   const app = createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService });
-  const server = app.listen(config.port, config.host, () => {
+  const server = app.listen(config.port, config.host, error => {
+    if (error) {
+      console.error(`HTTP 监听失败：${error.message}`);
+      campaignService.close();
+      inboxSyncWorker.close();
+      db.close();
+      process.exitCode = 1;
+      return;
+    }
     console.log(`iCloud 生产控制台已启动：http://${config.host}:${config.port}`);
   });
   const shutdown = signal => {

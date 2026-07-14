@@ -1,10 +1,12 @@
 import { useLoading } from '@skyroc/hooks';
 import { useSearch } from '@tanstack/react-router';
+import { useState } from 'react';
 
 import { useLoginMutation } from '@/service/api';
 
 export function useInitLogin() {
   const { endLoading, loading, startLoading } = useLoading();
+  const [error, setError] = useState('');
 
   const search = useSearch({ from: '/(auth)/login/' });
 
@@ -13,10 +15,12 @@ export function useInitLogin() {
   async function login(params: Api.Auth.LoginParams, redirect = true) {
     if (loading) return;
 
+    setError('');
     startLoading();
 
     toLogin(params, {
-      onError: () => {
+      onError: loginError => {
+        setError(loginError instanceof Error ? loginError.message : '登录失败');
         endLoading();
       },
       onSuccess: async () => {
@@ -26,7 +30,14 @@ export function useInitLogin() {
     });
   }
 
+  /** 清理当前登录错误。 */
+  function clearError() {
+    setError('');
+  }
+
   return {
+    clearError,
+    error,
     login,
     loading
   };

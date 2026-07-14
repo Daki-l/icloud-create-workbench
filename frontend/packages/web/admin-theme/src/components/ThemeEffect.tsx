@@ -26,7 +26,7 @@ const ThemeEffect = () => {
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, []);
+  }, [settings]);
 
   // Watch dark mode
   useEffect(() => {

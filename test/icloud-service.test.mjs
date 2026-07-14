@@ -19,9 +19,11 @@ function createContext() {
     cooldownMinutes: 60
   };
   const calls = [];
+  let validationError = "";
   /** 模拟上游 CK 校验、生成和列表接口。 */
   async function callBridge(ignoredConfig, command, payload) {
     calls.push({ command, payload });
+    if (command === "validate" && validationError) throw new Error(validationError);
     if (command === "validate") return {
       ok: true, cookie: "X-APPLE-SECRET=value", region: "global", appleId: "owner@example.com",
       dsid: "123456", displayName: "测试账号", featureAvailable: true,
@@ -36,19 +38,48 @@ function createContext() {
     throw new Error("未知命令");
   }
   const service = createIcloudService({ config, repositories, callBridge });
+  /** 设置下一次及后续 CK 校验返回的错误。 */
+  function setValidationError(message) { validationError = message; }
   /** 关闭测试数据库并删除临时目录。 */
   function cleanup() { db.close(); rmSync(directory, { recursive: true, force: true }); }
-  return { repositories, service, calls, cleanup };
+  return { repositories, service, calls, setValidationError, cleanup };
 }
 
-test("导入 CK 后只暴露脱敏账号信息", async () => {
+test("导入 CK 后返回完整 Apple ID", async () => {
   const context = createContext();
   try {
     const stored = await context.service.importAccount("Cookie: X-APPLE-SECRET=value", "auto");
     const publicAccount = context.repositories.getAccount(stored.id);
-    assert.equal(publicAccount.appleIdMasked, "ow***@example.com");
+    assert.equal(publicAccount.appleIdMasked, "owner@example.com");
     assert.equal("cookieEncrypted" in publicAccount, false);
     assert.equal(context.calls[0].command, "validate");
+  } finally { context.cleanup(); }
+});
+
+test("检测 CK 后持久化有效或过期状态", async () => {
+  const context = createContext();
+  try {
+    const validAccount = await context.service.importAccount("X-APPLE-SECRET=value", "auto");
+    const validResult = await context.service.checkCookie(validAccount.id);
+    assert.equal(validResult.valid, true);
+    assert.equal(context.repositories.getAccount(validAccount.id).status, "active");
+
+    context.setValidationError("CK 已失效");
+    const expiredResult = await context.service.checkCookie(validAccount.id);
+    assert.equal(expiredResult.valid, false);
+    assert.equal(expiredResult.account.status, "expired");
+  } finally { context.cleanup(); }
+});
+
+test("历史脱敏账号过期后不再显示星号 Apple ID", () => {
+  const context = createContext();
+  try {
+    const account = context.repositories.upsertAccount({
+      identityKey: "legacy", appleIdMasked: "ow***@example.com", dsid: "legacy", displayName: "历史账号",
+      region: "global", userPartition: "68", maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted"
+    });
+    context.repositories.markAccountExpired(account.id);
+    assert.equal(context.repositories.getAccount(account.id).appleIdMasked, "无法获取（CK 已过期）");
   } finally { context.cleanup(); }
 });
 

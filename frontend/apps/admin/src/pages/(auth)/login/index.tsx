@@ -1,50 +1,61 @@
+import { Button } from '@astryxdesign/core/Button';
+import { Heading } from '@astryxdesign/core/Heading';
+import { VStack } from '@astryxdesign/core/Stack';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import { createFileRoute } from '@tanstack/react-router';
+import { useState } from 'react';
 
-import { useAuthFormRules } from '@/features/auth/use-auth-form-rules';
 import { useInitLogin } from '@/features/auth/use-login';
 
-type LoginParams = Api.Auth.LoginParams;
-
-const INITIAL_VALUES = {
-  password: '',
-  userName: 'admin'
-};
-
+/** 渲染管理员密码登录表单。 */
 const Login = () => {
-  const { t } = useTranslation();
+  const [userName, setUserName] = useState('admin');
+  const [password, setPassword] = useState('');
+  const [validation, setValidation] = useState({ password: '', userName: '' });
+  const { clearError, error, loading, login } = useInitLogin();
 
-  const [form] = AForm.useForm<LoginParams>();
-
-  const { loading, login } = useInitLogin();
-
-  const {
-    createRequiredRule,
-    formRules: { userName: userNameRules }
-  } = useAuthFormRules();
-  const passwordRules = [createRequiredRule(t('form.pwd.required'))];
-
-  useKeyPress('enter', () => {
-    form.submit();
-  });
+  /** 校验并提交管理员登录。 */
+  function submit() {
+    const nextValidation = {
+      password: password ? '' : '请输入密码',
+      userName: userName ? '' : '请输入用户名'
+    };
+    setValidation(nextValidation);
+    if (nextValidation.password || nextValidation.userName) return;
+    login({ password, userName });
+  }
 
   return (
-    <>
-      <h3 className="text-18px text-primary font-medium">{t('page.login.pwdLogin.title')}</h3>
-      <AForm className="pt-24px" form={form} initialValues={INITIAL_VALUES} onFinish={login}>
-        <AForm.Item name="userName" rules={userNameRules}>
-          <AInput size="large" />
-        </AForm.Item>
-
-        <AForm.Item name="password" rules={passwordRules}>
-          <AInput.Password autoComplete="current-password" size="large" />
-        </AForm.Item>
-        <ASpace className="w-full" orientation="vertical" size={24}>
-          <AButton block color="primary" htmlType="submit" loading={loading} shape="round" size="large" type="primary">
-            {t('common.confirm')}
-          </AButton>
-        </ASpace>
-      </AForm>
-    </>
+    <VStack gap={4}>
+      <Heading level={3}>管理员登录</Heading>
+      <TextInput
+        isRequired
+        label="用户名"
+        size="lg"
+        status={validation.userName ? { message: validation.userName, type: 'error' } : undefined}
+        value={userName}
+        onChange={value => {
+          clearError();
+          setValidation(current => ({ ...current, userName: '' }));
+          setUserName(value);
+        }}
+      />
+      <TextInput
+        isRequired
+        label="密码"
+        size="lg"
+        status={error || validation.password ? { message: error || validation.password, type: 'error' } : undefined}
+        type="password"
+        value={password}
+        onChange={value => {
+          clearError();
+          setValidation(current => ({ ...current, password: '' }));
+          setPassword(value);
+        }}
+        onEnter={submit}
+      />
+      <Button isLoading={loading} label="登录" size="lg" variant="primary" onClick={submit} />
+    </VStack>
   );
 };
 

@@ -1,4 +1,4 @@
-import { decryptSecret, encryptSecret, maskAppleId } from "../security.mjs";
+import { decryptSecret, encryptSecret } from "../security.mjs";
 import { accountIdentityKey } from "../repositories.mjs";
 
 /** 创建 iCloud 账号与生成任务服务。 */
@@ -16,7 +16,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
     const identityKey = accountIdentityKey(checked.region, checked.dsid, checked.appleId);
     return {
       identityKey,
-      appleIdMasked: maskAppleId(checked.appleId),
+      appleIdMasked: checked.appleId,
       dsid: checked.dsid,
       displayName: checked.displayName,
       region: checked.region,
@@ -40,6 +40,20 @@ export function createIcloudService({ config, repositories, callBridge }) {
       throw Object.assign(new Error("新 CK 不属于当前 Apple ID，请使用导入功能新增账号"), { status: 409 });
     }
     return repositories.updateAccountCookie(accountId, prepared);
+  }
+
+  /** 请求 Apple 校验已保存 CK，并持久化有效或过期状态。 */
+  async function checkCookie(accountId) {
+    const { account, cookie } = accountWithCookie(accountId);
+    try {
+      const prepared = await prepareAccount(cookie, account.region);
+      if (prepared.identityKey !== account.identity_key) throw new Error("CK 返回的 Apple ID 与当前账号不一致");
+      repositories.updateAccountCookie(accountId, prepared);
+      return { valid: true, account: repositories.getAccount(accountId) };
+    } catch (error) {
+      repositories.markAccountExpired(accountId);
+      return { valid: false, error: error.message, account: repositories.getAccount(accountId) };
+    }
   }
 
   /** 解密账号 CK，仅供受控的 Python 桥接调用。 */
@@ -107,5 +121,5 @@ export function createIcloudService({ config, repositories, callBridge }) {
     return { jobId: job.id, ...finished, generated: result.generated, errors: result.errors };
   }
 
-  return { importAccount, updateCookie, syncAddresses, generate };
+  return { importAccount, updateCookie, checkCookie, syncAddresses, generate };
 }

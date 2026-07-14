@@ -157,6 +157,12 @@ catalogs:
       specifier: 16.4.0
       version: 16.4.0
   ui-shared:
+    '@astryxdesign/core':
+      specifier: 0.1.4
+      version: 0.1.4
+    '@astryxdesign/theme-neutral':
+      specifier: 0.1.4
+      version: 0.1.4
     '@iconify/json':
       specifier: ^2.2.416
       version: 2.2.442
@@ -178,6 +184,12 @@ catalogs:
     '@radix-ui/react-tooltip':
       specifier: 1.2.7
       version: 1.2.7
+    '@stylexjs/stylex':
+      specifier: 0.18.3
+      version: 0.18.3
+    lucide-react:
+      specifier: 1.24.0
+      version: 1.24.0
     motion:
       specifier: ^12.23.26
       version: 12.34.3
@@ -320,6 +332,12 @@ importers:
 
   apps/admin:
     dependencies:
+      '@astryxdesign/core':
+        specifier: catalog:ui-shared
+        version: 0.1.4(@stylexjs/stylex@0.18.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@astryxdesign/theme-neutral':
+        specifier: catalog:ui-shared
+        version: 0.1.4(@astryxdesign/core@0.1.4(@stylexjs/stylex@0.18.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
       '@skyroc/axios':
         specifier: workspace:*
         version: link:../../packages/@core/axios
@@ -362,6 +380,9 @@ importers:
       '@skyroc/web-ui-compose':
         specifier: workspace:*
         version: link:../../packages/web/ui/compose
+      '@stylexjs/stylex':
+        specifier: catalog:ui-shared
+        version: 0.18.3
       '@tanstack/react-query':
         specifier: catalog:core
         version: 5.90.21(react@19.1.0)
@@ -386,6 +407,9 @@ importers:
       jotai:
         specifier: catalog:core
         version: 2.18.0(@babel/core@7.29.0)(@babel/template@7.28.6)(@types/react@19.2.14)(react@19.1.0)
+      lucide-react:
+        specifier: catalog:ui-shared
+        version: 1.24.0(react@19.1.0)
       motion:
         specifier: catalog:ui-shared
         version: 12.34.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1765,6 +1789,19 @@ packages:
 
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
+
+  '@astryxdesign/core@0.1.4':
+    resolution: {integrity: sha512-pLwdh8Pu4ifgQ3thiaFjzitWzVpGJmyaSgNe2AZnGwGO1E876HY4k7s6m2wDnxbt5kxdSSeu0O6axq1LxUbwEQ==}
+    peerDependencies:
+      '@stylexjs/stylex': ^0.18.3
+      react: '>=19.0.0'
+      react-dom: '>=19.0.0'
+
+  '@astryxdesign/theme-neutral@0.1.4':
+    resolution: {integrity: sha512-h3BS3MZ/EKxTSC1JuNFMmDlO7jwmf4zycg/B4T7Dis6a/al2lIJMoOsMtjw+sz34TPGYhIceOZNl2yUOBGnyiA==}
+    peerDependencies:
+      '@astryxdesign/core': 0.1.4
+      react: '>=19'
 
   '@babel/code-frame@7.29.0':
     resolution: {integrity: sha512-9NhCeYjq9+3uxgdtp20LSiJXJvN0FeCtNGpJxuMFZ1Kv3cWUNb6DOhJwUvcVCzKGR66cw4njwM6hrJLqgOwbcw==}
@@ -4572,6 +4609,9 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
+  '@stylexjs/stylex@0.18.3':
+    resolution: {integrity: sha512-15gDzAJAorOE0yzxaWLNxldW2aqdmCiLG5QcPD8nmVCVqvrWp0Asgv45zk7LtN86WJb/4Ym9eQ6qT5MJW59tWQ==}
+
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0':
     resolution: {integrity: sha512-b9MIk7yhdS1pMCZM8VeNfUlSKVRhsHZNMl5O9SfaX0l0t5wjdgu4IDzGB8bpnGBBOjGST3rRFVsaaEtI4W6f7g==}
     engines: {node: '>=14'}
@@ -5752,6 +5792,9 @@ packages:
   crypto-js@4.2.0:
     resolution: {integrity: sha512-KALDyEYgpY+Rlob/iriUtjV6d5Eq+Y191A5g4UqLAi8CyGP9N1+FdVbkc1SxKc2r4YAYqG8JzO2KGL+AizD70Q==}
 
+  css-mediaquery@0.1.2:
+    resolution: {integrity: sha512-COtn4EROW5dBGlE/4PiKnh6rZpAPxDeFLaEEwt4i10jpDMFt2EhQGS79QmmrO+iKCHv0PU/HrOWEhijFd1x99Q==}
+
   css-select@4.3.0:
     resolution: {integrity: sha512-wPpOYtnsVontu2mODhA19JrqWxNsfdatRKd64kmpRbQgh1KtItko5sTnEpPdpSaJszTOhEMlF/RPz28qj4HqhQ==}
 
@@ -6667,6 +6710,9 @@ packages:
     resolution: {integrity: sha512-7m1vEcPCxXYI8HqnL8CKI6siDyD+eIWSwgB3DZA+ZTogxk9I4CDnj4wilt9x/+/QbHI4YG5YZNmC6458/e9Ktg==}
     deprecated: The Intersection Observer polyfill is no longer needed and can safely be removed. Intersection Observer has been Baseline since 2019.
 
+  invariant@2.2.4:
+    resolution: {integrity: sha512-phJfQVBuaJM5raOpJjSfkiD6BpbCE4Ns//LaXl6wGYtUBY83nWS6Rf9tXm2e8VaK60JEjYldbPif/A2B1C2gNA==}
+
   is-accessor-descriptor@1.0.1:
     resolution: {integrity: sha512-YBUanLI8Yoihw923YeFUS5fs0fF2f5TSFTNiYAAzhhDscDa3lEqYuz1pDOEP5KvX94I9ey3vsqjJcLVFVU+3QA==}
     engines: {node: '>= 0.10'}
@@ -7151,6 +7197,11 @@ packages:
 
   lucide-react@0.545.0:
     resolution: {integrity: sha512-7r1/yUuflQDSt4f1bpn5ZAocyIxcTyVyBBChSVtBKn5M+392cPmI5YJMWOJKk/HUWGm5wg83chlAZtCcGbEZtw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@1.24.0:
+    resolution: {integrity: sha512-YT6mBD8lGKkg4nM39enlm94/sfJIiW0YKUT60fBy4YK8tai31ylg1VhGNWxkpSKHo9UagfnZqwIff3HTDQwXeA==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -8172,6 +8223,9 @@ packages:
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
+  styleq@0.2.1:
+    resolution: {integrity: sha512-L0TR0NQb+X4/ktDEKmjWyp27gla+LUYi/by5k5SjKXf6/pvZP7wbwEB5J+tqxdFVPgzbsuz+d4RTScO/QZquBw==}
+
   stylis@4.3.6:
     resolution: {integrity: sha512-yQ3rwFWRfwNUY7H5vpU0wfdkNSnvnJinhF9830Swlaxl03zsOjCfmX0ugac+3LtK0lYSgwL/KXc8oYL3mG4YFQ==}
 
@@ -9070,6 +9124,18 @@ snapshots:
   '@asamuzakjp/generational-cache@1.0.1': {}
 
   '@asamuzakjp/nwsapi@2.3.9': {}
+
+  '@astryxdesign/core@0.1.4(@stylexjs/stylex@0.18.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@stylexjs/stylex': 0.18.3
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+
+  '@astryxdesign/theme-neutral@0.1.4(@astryxdesign/core@0.1.4(@stylexjs/stylex@0.18.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)':
+    dependencies:
+      '@astryxdesign/core': 0.1.4(@stylexjs/stylex@0.18.3)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      lucide-react: 1.24.0(react@19.1.0)
+      react: 19.1.0
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -12071,6 +12137,12 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
+  '@stylexjs/stylex@0.18.3':
+    dependencies:
+      css-mediaquery: 0.1.2
+      invariant: 2.2.4
+      styleq: 0.2.1
+
   '@svgr/babel-plugin-add-jsx-attribute@8.0.0(@babel/core@7.29.0)':
     dependencies:
       '@babel/core': 7.29.0
@@ -13675,6 +13747,8 @@ snapshots:
 
   crypto-js@4.2.0: {}
 
+  css-mediaquery@0.1.2: {}
+
   css-select@4.3.0:
     dependencies:
       boolbase: 1.0.0
@@ -14749,6 +14823,10 @@ snapshots:
 
   intersection-observer@0.12.2: {}
 
+  invariant@2.2.4:
+    dependencies:
+      loose-envify: 1.4.0
+
   is-accessor-descriptor@1.0.1:
     dependencies:
       hasown: 2.0.2
@@ -15201,7 +15279,6 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
-    optional: true
 
   lower-case@2.0.2:
     dependencies:
@@ -15217,6 +15294,10 @@ snapshots:
       yallist: 3.1.1
 
   lucide-react@0.545.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
+  lucide-react@1.24.0(react@19.1.0):
     dependencies:
       react: 19.1.0
 
@@ -16508,6 +16589,8 @@ snapshots:
   strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
+
+  styleq@0.2.1: {}
 
   stylis@4.3.6: {}
 
