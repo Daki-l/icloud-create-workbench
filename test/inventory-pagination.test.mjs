@@ -13,7 +13,7 @@ function createContext() {
   const repositories = createRepositories(db);
   /** 创建一个测试 CK 账号。 */
   function addAccount(key) {
-    return repositories.upsertAccount({ identityKey: key, appleIdMasked: `${key}***@example.com`, dsid: key,
+    return repositories.upsertAccount({ identityKey: key, appleId: `${key}@example.com`, dsid: key,
       displayName: key, region: "global", userPartition: "68", maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted" });
   }
   /** 清理临时数据库。 */

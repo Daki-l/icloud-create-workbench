@@ -57,7 +57,7 @@ const Home = () => {
         {index ? <Divider /> : null}
         <HStack hAlign="between" vAlign="center">
           <VStack gap={1}>
-            <Text weight="bold">{item.appleIdMasked}</Text>
+            <Text weight="bold">{item.appleId}</Text>
             <Text color="secondary" type="supporting">
               库存 {item.addressCount} · 未使用 {item.unusedCount}
             </Text>
@@ -78,10 +78,10 @@ const Home = () => {
         <VStack gap={3} key={item.id}>
           {index ? <Divider /> : null}
           <HStack hAlign="between" vAlign="center">
-            <Text weight="bold">{item.appleIdMasked}</Text>
+            <Text weight="bold">{item.appleId}</Text>
             <StatusBadge value={item.status} />
           </HStack>
-          <ProgressBar isLabelHidden label={`${item.appleIdMasked} 生产进度`} max={100} value={percent} />
+          <ProgressBar isLabelHidden label={`${item.appleId} 生产进度`} max={100} value={percent} />
           <Text color="secondary" type="supporting">
             库存 {item.currentTotal}/{item.targetTotal}
           </Text>

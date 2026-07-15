@@ -16,7 +16,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
     const identityKey = accountIdentityKey(checked.region, checked.dsid, checked.appleId);
     return {
       identityKey,
-      appleIdMasked: checked.appleId,
+      appleId: checked.appleId,
       dsid: checked.dsid,
       displayName: checked.displayName,
       region: checked.region,
@@ -101,8 +101,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
     if (!/^[A-Za-z0-9_-]{1,24}$/.test(prefix)) {
       throw Object.assign(new Error("标签前缀只能包含字母、数字、下划线和短横线，最长 24 位"), { status: 400 });
     }
-    const labels = repositories.allocateLabels(accountId, prefix, count);
-    const job = repositories.createJob(accountId, count);
+    const { job, labels } = repositories.createJobWithLabels(accountId, prefix, count);
     repositories.startJob(job.id);
     let result;
     try {

@@ -12,6 +12,7 @@ export async function api(path, options = {}) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const error = new Error(data.error || `请求失败：${response.status}`);
+    error.status = response.status;
     error.cooldownUntil = data.cooldownUntil;
     throw error;
   }

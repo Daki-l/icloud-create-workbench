@@ -157,7 +157,7 @@ const AccountsPage = () => {
   }
 
   const columns: TableColumn<AccountRow>[] = [
-    { key: 'appleIdMasked', header: 'Apple ID', width: proportional(2) },
+    { key: 'appleId', header: 'Apple ID', width: proportional(2) },
     { key: 'region', header: '区域', width: pixel(110), renderCell: row => <StatusBadge value={String(row.region)} /> },
     { key: 'status', header: 'CK 状态', width: pixel(110), renderCell: row => <StatusBadge value={String(row.status)} /> },
     {
@@ -228,7 +228,7 @@ const AccountsPage = () => {
             ? '更新后库存、任务、冷却和 IMAP 配置保持不变。'
             : '支持直接粘贴 CK 或浏览器 Copy as cURL 内容。'
         }
-        title={editingAccount ? `更新 CK · ${editingAccount.appleIdMasked}` : '导入 iCloud CK'}
+        title={editingAccount ? `更新 CK · ${editingAccount.appleId}` : '导入 iCloud CK'}
         onOpenChange={next => (next ? setOpen(true) : closeDialog())}
         onPrimary={submitCookie}
       >
@@ -262,7 +262,7 @@ const AccountsPage = () => {
         cancelLabel="取消"
         description="删除后历史邮箱仍会保留。"
         isOpen={Boolean(deleteTarget)}
-        title={`确认删除 ${deleteTarget?.appleIdMasked || '该 CK'}？`}
+        title={`确认删除 ${deleteTarget?.appleId || '该 CK'}？`}
         onAction={deleteAccount}
         onOpenChange={next => {
           if (!next) setDeleteTarget(undefined);

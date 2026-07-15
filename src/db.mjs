@@ -12,7 +12,7 @@ export function createDatabase(databasePath) {
   db.exec(`
     CREATE TABLE IF NOT EXISTS icloud_accounts (
       id TEXT PRIMARY KEY,
-      apple_id_masked TEXT NOT NULL,
+      apple_id TEXT NOT NULL,
       identity_key TEXT NOT NULL UNIQUE,
       dsid TEXT,
       display_name TEXT,
@@ -135,6 +135,36 @@ export function createDatabase(databasePath) {
     CREATE INDEX IF NOT EXISTS idx_messages_received ON inbox_messages(received_at DESC);
     CREATE INDEX IF NOT EXISTS idx_messages_address ON inbox_messages(address_id, received_at DESC);
   `);
+  const migrationTime = new Date().toISOString();
+  db.transaction(() => {
+    db.prepare(`UPDATE generation_campaigns SET status = 'superseded', next_run_at = NULL, updated_at = ?
+      WHERE status IN ('running', 'stopped') AND id NOT IN (
+        SELECT id FROM generation_campaigns current
+        WHERE current.status IN ('running', 'stopped')
+          AND current.id = (SELECT latest.id FROM generation_campaigns latest
+            WHERE latest.account_id = current.account_id AND latest.status IN ('running', 'stopped')
+            ORDER BY latest.created_at DESC, latest.rowid DESC LIMIT 1)
+      )`).run(migrationTime);
+    db.prepare(`UPDATE generation_jobs SET status = 'failed',
+      error_summary = '重复任务已由系统终止', finished_at = COALESCE(finished_at, ?)
+      WHERE status IN ('queued', 'running') AND id NOT IN (
+        SELECT id FROM generation_jobs current
+        WHERE current.status IN ('queued', 'running')
+          AND current.id = (SELECT latest.id FROM generation_jobs latest
+            WHERE latest.account_id = current.account_id AND latest.status IN ('queued', 'running')
+            ORDER BY latest.created_at DESC, latest.rowid DESC LIMIT 1)
+      )`).run(migrationTime);
+  })();
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_campaigns_one_open_per_account
+      ON generation_campaigns(account_id) WHERE status IN ('running', 'stopped');
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_one_active_per_account
+      ON generation_jobs(account_id) WHERE status IN ('queued', 'running');
+  `);
+  const accountColumns = db.pragma("table_info(icloud_accounts)");
+  if (!accountColumns.some(column => column.name === "apple_id") && accountColumns.some(column => column.name === "apple_id_masked")) {
+    db.exec("ALTER TABLE icloud_accounts RENAME COLUMN apple_id_masked TO apple_id");
+  }
   const messageColumns = db.pragma("table_info(inbox_messages)");
   if (!messageColumns.some(column => column.name === "account_id")) {
     db.exec("ALTER TABLE inbox_messages ADD COLUMN account_id TEXT REFERENCES icloud_accounts(id)");

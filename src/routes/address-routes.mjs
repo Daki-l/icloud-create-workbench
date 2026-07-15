@@ -26,7 +26,7 @@ export function createAddressRouter(repositories, publicMailService) {
   router.get("/export", (req, res) => {
     const rows = repositories.listAddresses({ accountId: req.query.accountId, state: req.query.state });
     const csv = ["邮箱,标签,状态,来源,Apple ID,创建时间", ...rows.map(row => [
-      row.email, row.label, row.state, row.source, row.appleIdMasked, row.createdAt
+      row.email, row.label, row.state, row.source, row.appleId, row.createdAt
     ].map(csvCell).join(","))].join("\r\n");
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", "attachment; filename=hidden-addresses.csv");

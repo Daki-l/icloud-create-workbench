@@ -13,7 +13,7 @@ function createContext() {
   const db = createDatabase(join(directory, "test.db"));
   const repositories = createRepositories(db);
   const account = repositories.upsertAccount({
-    identityKey: "campaign-account", appleIdMasked: "te***@example.com", dsid: "1", displayName: "测试",
+    identityKey: "campaign-account", appleId: "test@example.com", dsid: "1", displayName: "测试",
     region: "global", userPartition: "68", maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted"
   });
   let sequence = 0;
@@ -60,6 +60,39 @@ test("生产目标支持停止和继续", () => {
     assert.equal(context.service.listCampaigns(10)[0].status, "stopped");
     context.service.resumeCampaign(campaign.id);
     assert.equal(context.service.listCampaigns(10)[0].status, "running");
+  } finally { context.cleanup(); }
+});
+
+test("同一 CK 只能保留一个未完成生产目标", () => {
+  const context = createContext();
+  try {
+    const campaign = context.service.createCampaign({ accountId: context.account.id, targetTotal: 10 });
+    assert.throws(
+      () => context.service.createCampaign({ accountId: context.account.id, targetTotal: 20 }),
+      error => error.status === 409
+    );
+    context.service.stopCampaign(campaign.id);
+    assert.throws(
+      () => context.service.createCampaign({ accountId: context.account.id, targetTotal: 20 }),
+      error => error.status === 409
+    );
+  } finally { context.cleanup(); }
+});
+
+test("数据库唯一索引防止并发绕过业务预检", () => {
+  const context = createContext();
+  try {
+    context.repositories.createCampaign({
+      accountId: context.account.id, targetTotal: 10, batchSize: 5,
+      labelPrefix: "first", nextRunAt: new Date().toISOString()
+    });
+    assert.throws(
+      () => context.repositories.createCampaign({
+        accountId: context.account.id, targetTotal: 20, batchSize: 5,
+        labelPrefix: "second", nextRunAt: new Date().toISOString()
+      }),
+      error => error.status === 409 && error.message === "该 CK 已有未结束任务"
+    );
   } finally { context.cleanup(); }
 });
 

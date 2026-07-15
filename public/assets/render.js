@@ -26,7 +26,7 @@ export function renderAccounts(accounts) {
   return accounts.map(account => `
     <article class="account-card" data-account-id="${escapeHtml(account.id)}">
       <div class="card-head"><span class="status-dot"></span><span class="pill">${escapeHtml(account.status === "expired" ? "CK 已过期" : "CK 有效")}</span></div>
-      <h3>${escapeHtml(account.appleIdMasked)}</h3><p class="muted">${escapeHtml(account.displayName || "未命名账号")}</p>
+      <h3>${escapeHtml(account.appleId)}</h3><p class="muted">${escapeHtml(account.displayName || "未命名账号")}</p>
       <div class="stats"><div><strong>${account.addressCount || 0}</strong><span>邮箱总数</span></div><div><strong>${account.unusedCount || 0}</strong><span>未使用</span></div></div>
       <p class="cooldown">${escapeHtml(cooldownText(account.cooldownUntil))}</p>
       <button class="secondary full" data-action="detail">进入工作台</button>
@@ -43,7 +43,7 @@ export function renderAccountMeta(account) {
 export function renderAddresses(addresses) {
   if (!addresses.length) return `<tr><td colspan="7" class="empty">暂无隐藏邮箱</td></tr>`;
   const labels = { unused: "未使用", used: "已使用", trash: "垃圾箱" };
-  return addresses.map(item => `<tr data-address-id="${escapeHtml(item.id)}"><td><input type="checkbox" data-address-select value="${escapeHtml(item.id)}"></td><td><button class="copy-email" data-email="${escapeHtml(item.email)}">${escapeHtml(item.email)}</button></td><td>${escapeHtml(item.appleIdMasked || "—")}</td><td>${escapeHtml(item.label || "—")}</td><td><select data-state><option value="unused" ${item.state === "unused" ? "selected" : ""}>未使用</option><option value="used" ${item.state === "used" ? "selected" : ""}>已使用</option><option value="trash" ${item.state === "trash" ? "selected" : ""}>垃圾箱</option></select><span class="sr-only">${labels[item.state]}</span></td><td>${item.source === "generated" ? "本地生成" : "Apple 同步"}</td><td>${formatTime(item.createdAt)}</td></tr>`).join("");
+  return addresses.map(item => `<tr data-address-id="${escapeHtml(item.id)}"><td><input type="checkbox" data-address-select value="${escapeHtml(item.id)}"></td><td><button class="copy-email" data-email="${escapeHtml(item.email)}">${escapeHtml(item.email)}</button></td><td>${escapeHtml(item.appleId || "—")}</td><td>${escapeHtml(item.label || "—")}</td><td><select data-state><option value="unused" ${item.state === "unused" ? "selected" : ""}>未使用</option><option value="used" ${item.state === "used" ? "selected" : ""}>已使用</option><option value="trash" ${item.state === "trash" ? "selected" : ""}>垃圾箱</option></select><span class="sr-only">${labels[item.state]}</span></td><td>${item.source === "generated" ? "本地生成" : "Apple 同步"}</td><td>${formatTime(item.createdAt)}</td></tr>`).join("");
 }
 
 /** 渲染持续生产目标、进度和控制按钮。 */
@@ -55,7 +55,7 @@ export function renderCampaigns(campaigns) {
     const action = item.status === "running"
       ? `<button class="danger" data-campaign-stop="${escapeHtml(item.id)}">停止</button>`
       : item.status === "stopped" ? `<button class="secondary" data-campaign-resume="${escapeHtml(item.id)}">继续</button>` : "";
-    return `<article class="campaign-item"><div class="section-head"><div><strong>${escapeHtml(item.appleIdMasked)}</strong><p class="muted">目标 ${item.targetTotal} · 每批 ${item.batchSize} · 本任务新增 ${item.generatedCount}</p></div><span class="pill ${item.status}">${names[item.status] || item.status}</span></div><progress class="progress" value="${Number(item.currentTotal || 0)}" max="${Number(item.targetTotal || 1)}"></progress><div class="campaign-foot"><span>库存 ${item.currentTotal}/${item.targetTotal}（${percent}%）</span><span>${item.status === "running" ? `下批：${formatTime(item.nextRunAt)}` : ""}</span>${action}</div>${item.lastError ? `<p class="error-text">${escapeHtml(item.lastError)}</p>` : ""}</article>`;
+    return `<article class="campaign-item"><div class="section-head"><div><strong>${escapeHtml(item.appleId)}</strong><p class="muted">目标 ${item.targetTotal} · 每批 ${item.batchSize} · 本任务新增 ${item.generatedCount}</p></div><span class="pill ${item.status}">${names[item.status] || item.status}</span></div><progress class="progress" value="${Number(item.currentTotal || 0)}" max="${Number(item.targetTotal || 1)}"></progress><div class="campaign-foot"><span>库存 ${item.currentTotal}/${item.targetTotal}（${percent}%）</span><span>${item.status === "running" ? `下批：${formatTime(item.nextRunAt)}` : ""}</span>${action}</div>${item.lastError ? `<p class="error-text">${escapeHtml(item.lastError)}</p>` : ""}</article>`;
   }).join("");
 }
 
@@ -69,7 +69,7 @@ export function renderPagination(pagination, kind) {
 export function renderJobs(jobs) {
   if (!jobs.length) return `<div class="empty">暂无生成记录</div>`;
   const names = { queued: "等待", running: "运行中", partial: "部分成功", success: "成功", failed: "失败" };
-  return jobs.map(job => `<article class="job-item"><div class="section-head"><div><strong>${escapeHtml(job.appleIdMasked || "当前账号")}</strong><p class="muted">${formatTime(job.createdAt)} · 请求 ${job.requestedCount} 个</p></div><span class="pill ${job.status}">${names[job.status] || job.status}</span></div>${(job.results || []).map(result => `<div class="job-result"><span>${escapeHtml(result.label)}</span><span>${escapeHtml(result.email || result.error || "")}</span></div>`).join("")}</article>`).join("");
+  return jobs.map(job => `<article class="job-item"><div class="section-head"><div><strong>${escapeHtml(job.appleId || "当前账号")}</strong><p class="muted">${formatTime(job.createdAt)} · 请求 ${job.requestedCount} 个</p></div><span class="pill ${job.status}">${names[job.status] || job.status}</span></div>${(job.results || []).map(result => `<div class="job-result"><span>${escapeHtml(result.label)}</span><span>${escapeHtml(result.email || result.error || "")}</span></div>`).join("")}</article>`).join("");
 }
 
 /** 渲染收件与验证码列表。 */

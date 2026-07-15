@@ -8,7 +8,7 @@ export interface Pagination {
 export interface Account {
   id: string;
   addressCount: number;
-  appleIdMasked: string;
+  appleId: string;
   cooldownUntil?: string;
   displayName?: string;
   labelPrefix: string;
@@ -22,7 +22,7 @@ export interface Account {
 export interface Campaign {
   id: string;
   accountId: string;
-  appleIdMasked: string;
+  appleId: string;
   batchSize: number;
   currentTotal: number;
   generatedCount: number;
@@ -36,7 +36,7 @@ export interface Campaign {
 export interface Address {
   id: string;
   accountId: string;
-  appleIdMasked: string;
+  appleId: string;
   createdAt: string;
   email: string;
   label: string;

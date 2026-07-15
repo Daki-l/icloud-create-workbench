@@ -30,7 +30,7 @@ interface JobResult {
   label: string;
 }
 interface Job {
-  appleIdMasked: string;
+  appleId: string;
   createdAt: string;
   id: string;
   requestedCount: number;
@@ -183,10 +183,10 @@ const TasksPage = () => {
         <Card key={item.id}>
           <VStack gap={3}>
             <HStack hAlign="between" vAlign="center">
-              <Text weight="bold">{item.appleIdMasked}</Text>
+              <Text weight="bold">{item.appleId}</Text>
               <StatusBadge value={item.status} />
             </HStack>
-            <ProgressBar isLabelHidden label={`${item.appleIdMasked} 生产进度`} max={100} value={percent} />
+            <ProgressBar isLabelHidden label={`${item.appleId} 生产进度`} max={100} value={percent} />
             <Text color="secondary" type="supporting">
               库存 {item.currentTotal}/{item.targetTotal} · 每批 {item.batchSize} · 前缀 {item.labelPrefix}
             </Text>
@@ -223,7 +223,7 @@ const TasksPage = () => {
     return rows.map(job => (
       <VStack gap={2} key={job.id}>
         <HStack hAlign="between" vAlign="center">
-          <Text weight="bold">{job.appleIdMasked}</Text>
+          <Text weight="bold">{job.appleId}</Text>
           <StatusBadge value={job.status} />
         </HStack>
         <Text color="secondary" type="supporting">
@@ -250,7 +250,7 @@ const TasksPage = () => {
                 isRequired
                 label="CK 账号"
                 options={(accounts.data?.accounts || []).map(item => ({
-                  label: `${item.appleIdMasked} · 库存 ${item.addressCount}`,
+                  label: `${item.appleId} · 库存 ${item.addressCount}`,
                   value: item.id
                 }))}
                 placeholder="选择 CK 账号"

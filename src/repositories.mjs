@@ -7,8 +7,15 @@ export function accountIdentityKey(region, dsid, appleId) {
 
 /** 创建业务数据仓库。 */
 export function createRepositories(db) {
+  /** 将活动任务唯一约束冲突转换为统一的业务错误。 */
+  function throwTaskConflict(error) {
+    if (error?.code === "SQLITE_CONSTRAINT_UNIQUE") {
+      throw Object.assign(new Error("该 CK 已有未结束任务"), { status: 409 });
+    }
+    throw error;
+  }
   const accountSummarySql = `
-    SELECT a.id, a.apple_id_masked AS appleIdMasked, a.display_name AS displayName,
+    SELECT a.id, a.apple_id AS appleId, a.display_name AS displayName,
       a.region, a.user_partition AS userPartition, a.maildomain_host AS maildomainHost,
       a.status, a.label_prefix AS labelPrefix, a.cooldown_until AS cooldownUntil,
       a.last_checked_at AS lastCheckedAt, a.created_at AS createdAt, a.updated_at AS updatedAt,
@@ -39,18 +46,18 @@ export function createRepositories(db) {
     const now = new Date().toISOString();
     const existing = db.prepare("SELECT id FROM icloud_accounts WHERE identity_key = ?").get(input.identityKey);
     if (existing) {
-      db.prepare(`UPDATE icloud_accounts SET apple_id_masked = ?, dsid = ?, display_name = ?, region = ?,
+      db.prepare(`UPDATE icloud_accounts SET apple_id = ?, dsid = ?, display_name = ?, region = ?,
         user_partition = ?, maildomain_host = ?, cookie_encrypted = ?, status = 'active', last_checked_at = ?, updated_at = ?
-        WHERE id = ?`).run(input.appleIdMasked, input.dsid || "", input.displayName || "", input.region,
+        WHERE id = ?`).run(input.appleId, input.dsid || "", input.displayName || "", input.region,
         input.userPartition || "", input.maildomainHost || "", input.cookieEncrypted, now, now, existing.id);
       return getAccountInternal(existing.id);
     }
     const id = randomUUID();
     db.prepare(`INSERT INTO icloud_accounts
-      (id, apple_id_masked, identity_key, dsid, display_name, region, user_partition, maildomain_host,
+      (id, apple_id, identity_key, dsid, display_name, region, user_partition, maildomain_host,
        cookie_encrypted, status, label_prefix, label_sequence, last_checked_at, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'changsheng', 0, ?, ?, ?)`)
-      .run(id, input.appleIdMasked, input.identityKey, input.dsid || "", input.displayName || "", input.region,
+      .run(id, input.appleId, input.identityKey, input.dsid || "", input.displayName || "", input.region,
         input.userPartition || "", input.maildomainHost || "", input.cookieEncrypted, now, now, now);
     return getAccountInternal(id);
   }
@@ -58,9 +65,9 @@ export function createRepositories(db) {
   /** 更新账号检测结果与加密 CK。 */
   function updateAccountCookie(id, input) {
     const now = new Date().toISOString();
-    db.prepare(`UPDATE icloud_accounts SET apple_id_masked = ?, dsid = ?, display_name = ?, region = ?,
+    db.prepare(`UPDATE icloud_accounts SET apple_id = ?, dsid = ?, display_name = ?, region = ?,
       user_partition = ?, maildomain_host = ?, identity_key = ?, cookie_encrypted = ?, status = 'active',
-      last_checked_at = ?, updated_at = ? WHERE id = ?`).run(input.appleIdMasked, input.dsid || "",
+      last_checked_at = ?, updated_at = ? WHERE id = ?`).run(input.appleId, input.dsid || "",
       input.displayName || "", input.region, input.userPartition || "", input.maildomainHost || "",
       input.identityKey, input.cookieEncrypted, now, now, id);
     return getAccountInternal(id);
@@ -69,8 +76,8 @@ export function createRepositories(db) {
   /** 将最近一次 Apple 请求失败的 CK 标记为已过期。 */
   function markAccountExpired(id) {
     const now = new Date().toISOString();
-    db.prepare(`UPDATE icloud_accounts SET apple_id_masked = CASE WHEN apple_id_masked LIKE '%***%' THEN '无法获取（CK 已过期）'
-      ELSE apple_id_masked END, status = 'expired', last_checked_at = ?, updated_at = ? WHERE id = ?`).run(now, now, id);
+    db.prepare(`UPDATE icloud_accounts SET apple_id = CASE WHEN apple_id LIKE '%***%' THEN '无法获取（CK 已过期）'
+      ELSE apple_id END, status = 'expired', last_checked_at = ?, updated_at = ? WHERE id = ?`).run(now, now, id);
   }
   /** 软删除账号并清除其加密 CK。 */
   function deleteAccount(id) {
@@ -88,9 +95,26 @@ export function createRepositories(db) {
   /** 创建一条等待执行的生成任务。 */
   function createJob(accountId, requestedCount) {
     const job = { id: randomUUID(), accountId, requestedCount, status: "queued", createdAt: new Date().toISOString() };
-    db.prepare(`INSERT INTO generation_jobs (id, account_id, requested_count, status, created_at)
-      VALUES (?, ?, ?, ?, ?)`).run(job.id, accountId, requestedCount, job.status, job.createdAt);
+    try {
+      db.prepare(`INSERT INTO generation_jobs (id, account_id, requested_count, status, created_at)
+        VALUES (?, ?, ?, ?, ?)`).run(job.id, accountId, requestedCount, job.status, job.createdAt);
+    } catch (error) {
+      throwTaskConflict(error);
+    }
     return job;
+  }
+
+  /** 原子占用批次任务名额并分配连续标签。 */
+  function createJobWithLabels(accountId, prefix, count) {
+    try {
+      return db.transaction(() => {
+        const job = createJob(accountId, count);
+        const labels = allocateLabels(accountId, prefix, count);
+        return { job, labels };
+      })();
+    } catch (error) {
+      throwTaskConflict(error);
+    }
   }
 
   /** 原子分配一批连续标签并更新账号前缀。 */
@@ -167,7 +191,7 @@ export function createRepositories(db) {
   function listAllJobs(limit = 100) {
     const jobs = db.prepare(`SELECT j.id, j.account_id AS accountId, j.requested_count AS requestedCount,
       j.status, j.error_summary AS errorSummary, j.started_at AS startedAt, j.finished_at AS finishedAt,
-      j.first_success_at AS firstSuccessAt, j.created_at AS createdAt, a.apple_id_masked AS appleIdMasked
+      j.first_success_at AS firstSuccessAt, j.created_at AS createdAt, a.apple_id AS appleId
       FROM generation_jobs j LEFT JOIN icloud_accounts a ON a.id = j.account_id
       ORDER BY j.created_at DESC LIMIT ?`).all(limit);
     const resultStatement = db.prepare(`SELECT label, email, status, error_text AS error, created_at AS createdAt
@@ -181,7 +205,7 @@ export function createRepositories(db) {
     const offset = (page - 1) * pageSize;
     const jobs = db.prepare(`SELECT j.id, j.account_id AS accountId, j.requested_count AS requestedCount,
       j.status, j.error_summary AS errorSummary, j.started_at AS startedAt, j.finished_at AS finishedAt,
-      j.first_success_at AS firstSuccessAt, j.created_at AS createdAt, a.apple_id_masked AS appleIdMasked
+      j.first_success_at AS firstSuccessAt, j.created_at AS createdAt, a.apple_id AS appleId
       FROM generation_jobs j LEFT JOIN icloud_accounts a ON a.id = j.account_id
       ORDER BY j.created_at DESC LIMIT ? OFFSET ?`).all(pageSize, offset);
     const resultStatement = db.prepare(`SELECT label, email, status, error_text AS error, created_at AS createdAt
@@ -198,10 +222,14 @@ export function createRepositories(db) {
   function createCampaign(input) {
     const now = new Date().toISOString();
     const campaign = { id: randomUUID(), ...input, status: "running", createdAt: now };
-    db.prepare(`INSERT INTO generation_campaigns
-      (id, account_id, target_total, batch_size, label_prefix, status, next_run_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, 'running', ?, ?, ?)`)
-      .run(campaign.id, input.accountId, input.targetTotal, input.batchSize, input.labelPrefix, input.nextRunAt, now, now);
+    try {
+      db.prepare(`INSERT INTO generation_campaigns
+        (id, account_id, target_total, batch_size, label_prefix, status, next_run_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 'running', ?, ?, ?)`)
+        .run(campaign.id, input.accountId, input.targetTotal, input.batchSize, input.labelPrefix, input.nextRunAt, now, now);
+    } catch (error) {
+      throwTaskConflict(error);
+    }
     return campaign;
   }
 
@@ -222,7 +250,7 @@ export function createRepositories(db) {
       c.generated_count AS generatedCount, c.last_error AS lastError,
       c.next_run_at AS nextRunAt, c.last_run_at AS lastRunAt,
       c.created_at AS createdAt, c.updated_at AS updatedAt,
-      a.apple_id_masked AS appleIdMasked, a.cooldown_until AS cooldownUntil,
+      a.apple_id AS appleId, a.cooldown_until AS cooldownUntil,
       (SELECT COUNT(*) FROM hidden_addresses h WHERE h.account_id = c.account_id) AS currentTotal
       FROM generation_campaigns c LEFT JOIN icloud_accounts a ON a.id = c.account_id
       ORDER BY c.created_at DESC LIMIT ?`).all(limit);
@@ -305,7 +333,7 @@ export function createRepositories(db) {
     if (["unused", "used", "trash"].includes(filters.state)) { where.push("h.local_state = ?"); values.push(filters.state); }
     if (filters.search) { where.push("(h.email LIKE ? OR h.apple_label LIKE ?)"); values.push(`%${filters.search}%`, `%${filters.search}%`); }
     return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
-      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id_masked AS appleIdMasked
+      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
       FROM hidden_addresses h LEFT JOIN icloud_accounts a ON a.id = h.account_id
       WHERE ${where.join(" AND ")} ORDER BY h.created_at DESC LIMIT 1000`).all(...values);
   }
@@ -320,7 +348,7 @@ export function createRepositories(db) {
     const clause = where.join(" AND ");
     const total = Number(db.prepare(`SELECT COUNT(*) AS count FROM hidden_addresses h WHERE ${clause}`).get(...values).count || 0);
     const rows = db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
-      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id_masked AS appleIdMasked
+      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
       ,(SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount
       ,(SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt
       ,(SELECT m.code FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestCode
@@ -352,7 +380,7 @@ export function createRepositories(db) {
   function getAddress(id) {
     return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
       h.local_state AS state, h.source, h.created_at AS createdAt, h.updated_at AS updatedAt,
-      a.apple_id_masked AS appleIdMasked, a.region,
+      a.apple_id AS appleId, a.region,
       (SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount,
       (SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt,
       (SELECT m.code FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestCode,
@@ -489,7 +517,7 @@ export function createRepositories(db) {
 
   return {
     listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, markAccountExpired, deleteAccount, updateMaildomainHost,
-    createJob, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
+    createJob, createJobWithLabels, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,

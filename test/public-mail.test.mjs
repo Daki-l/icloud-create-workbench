@@ -15,7 +15,7 @@ function createContext() {
   const directory = mkdtempSync(join(tmpdir(), "icloud-public-mail-"));
   const db = createDatabase(join(directory, "test.db"));
   const repositories = createRepositories(db);
-  const account = repositories.upsertAccount({ identityKey: "public", appleIdMasked: "pu***@example.com",
+  const account = repositories.upsertAccount({ identityKey: "public", appleId: "public@example.com",
     dsid: "public", displayName: "公开测试", region: "global", userPartition: "68",
     maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted" });
   repositories.upsertAddresses(account.id, null, [{ email: "public@icloud.com", label: "public-001" }], "generated");

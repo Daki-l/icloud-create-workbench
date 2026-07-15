@@ -137,7 +137,7 @@ const AddressesPage = () => {
       width: proportional(2),
       renderCell: row => <Text className="workbench-code">{String(row.email)}</Text>
     },
-    { key: 'appleIdMasked', header: 'Apple ID', width: proportional(1.5) },
+    { key: 'appleId', header: 'Apple ID', width: proportional(1.5) },
     { key: 'label', header: '标签', width: proportional(1) },
     { key: 'state', header: '状态', width: pixel(100), renderCell: row => <StatusBadge value={String(row.state)} /> },
     {
@@ -186,7 +186,7 @@ const AddressesPage = () => {
               hasClear
               isLabelHidden
               label="CK 账号筛选"
-              options={(accounts.data?.accounts || []).map(item => ({ label: item.appleIdMasked, value: item.id }))}
+              options={(accounts.data?.accounts || []).map(item => ({ label: item.appleId, value: item.id }))}
               placeholder="全部 CK"
               value={draftFilters.accountId}
               onChange={accountId => setDraftFilters(current => ({ ...current, accountId: accountId || '' }))}

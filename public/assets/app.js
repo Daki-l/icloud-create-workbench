@@ -49,7 +49,7 @@ function renderOverview() {
   elements.overviewAddresses.textContent = state.accounts.reduce((sum, item) => sum + Number(item.addressCount || 0), 0);
   elements.overviewUnused.textContent = state.accounts.reduce((sum, item) => sum + Number(item.unusedCount || 0), 0);
   elements.overviewJobs.textContent = state.jobPagination.total || 0;
-  elements.overviewAccountList.innerHTML = state.accounts.length ? state.accounts.map(account => `<button class="compact-row" data-account-open="${escapeHtml(account.id)}"><span><strong>${escapeHtml(account.appleIdMasked)}</strong><small>${escapeHtml(account.region === "china" ? "中国区" : "全球区")}</small></span><span>${escapeHtml(cooldownText(account.cooldownUntil))}</span></button>`).join("") : `<div class="empty">暂无 CK 账号</div>`;
+  elements.overviewAccountList.innerHTML = state.accounts.length ? state.accounts.map(account => `<button class="compact-row" data-account-open="${escapeHtml(account.id)}"><span><strong>${escapeHtml(account.appleId)}</strong><small>${escapeHtml(account.region === "china" ? "中国区" : "全球区")}</small></span><span>${escapeHtml(cooldownText(account.cooldownUntil))}</span></button>`).join("") : `<div class="empty">暂无 CK 账号</div>`;
   elements.overviewJobList.innerHTML = renderJobs(state.jobs.slice(0, 3));
 }
 
@@ -58,7 +58,7 @@ function renderAccountSelectors() {
   const taskValue = elements.taskAccount.value || state.selectedAccountId;
   const filterValue = elements.accountFilter.value;
   const inboxValue = elements.inboxAccount.value;
-  const options = state.accounts.map(account => `<option value="${escapeHtml(account.id)}">${escapeHtml(account.appleIdMasked)}</option>`).join("");
+  const options = state.accounts.map(account => `<option value="${escapeHtml(account.id)}">${escapeHtml(account.appleId)}</option>`).join("");
   elements.taskAccount.innerHTML = options || `<option value="">请先导入 CK</option>`;
   elements.accountFilter.innerHTML = `<option value="">全部 CK</option>${options}`;
   elements.inboxAccount.innerHTML = options || `<option value="">请先导入 CK</option>`;
@@ -115,7 +115,7 @@ async function loadCoreData() {
 /** 打开指定 CK 的账号详情。 */
 async function openAccount(accountId) {
   const detail = await api(`/api/icloud-accounts/${accountId}`); state.selectedAccountId = accountId;
-  elements.detailTitle.textContent = detail.account.appleIdMasked; elements.detailMeta.innerHTML = renderAccountMeta(detail.account);
+  elements.detailTitle.textContent = detail.account.appleId; elements.detailMeta.innerHTML = renderAccountMeta(detail.account);
   elements.detailCooldown.textContent = cooldownText(detail.account.cooldownUntil); elements.detailPanel.classList.remove("hidden");
   navigate("accounts"); elements.detailPanel.scrollIntoView({ behavior: "smooth" });
 }
@@ -132,7 +132,7 @@ async function createCampaign(event) {
   event.preventDefault(); const values = formValues(elements.taskForm); if (!values.accountId) return toast("请先选择 CK 账号", true);
   setBusy(elements.taskForm, true, "正在启动...");
   try { await api("/api/generation-campaigns", { method: "POST", body: JSON.stringify({ accountId: values.accountId, targetTotal: Number(values.targetTotal), batchSize: Number(values.batchSize), labelPrefix: values.labelPrefix }) }); await loadCoreData(); toast("持续生产目标已启动"); }
-  catch (error) { toast(error.message, true); } finally { setBusy(elements.taskForm, false); updateTaskAccountStatus(); }
+  catch (error) { if (error.status === 409) await loadCoreData(); toast(error.message, true); } finally { setBusy(elements.taskForm, false); updateTaskAccountStatus(); }
 }
 
 /** 停止或继续一个持续生产目标。 */

@@ -156,7 +156,7 @@ const InboxPage = () => {
         />
         <Selector
           label="当前 CK"
-          options={(accounts.data?.accounts || []).map(item => ({ label: item.appleIdMasked, value: item.id }))}
+          options={(accounts.data?.accounts || []).map(item => ({ label: item.appleId, value: item.id }))}
           placeholder="选择 CK"
           value={accountId}
           onChange={value => setAccountId(value || '')}

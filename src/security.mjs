@@ -86,11 +86,3 @@ export function sessionCookieOptions(config) {
     maxAge: 8 * 60 * 60 * 1000
   };
 }
-
-/** 对 Apple ID 进行脱敏展示。 */
-export function maskAppleId(value) {
-  const text = String(value || "");
-  const [name, domain] = text.split("@");
-  if (!domain) return text ? `${text.slice(0, 2)}***` : "未知账号";
-  return `${name.slice(0, 2)}***@${domain}`;
-}

@@ -7,7 +7,7 @@ export function createAccountRouter({ repositories, icloudService }) {
   /** 返回全部 CK 摘要，并自动补齐历史账号的完整 Apple ID。 */
   router.get("/", async (req, res) => {
     let accounts = repositories.listAccounts();
-    const legacyAccounts = accounts.filter(account => account.appleIdMasked.includes("***"));
+    const legacyAccounts = accounts.filter(account => account.appleId.includes("***"));
     for (const account of legacyAccounts) await icloudService.checkCookie(account.id);
     if (legacyAccounts.length) accounts = repositories.listAccounts();
     res.json({ accounts });

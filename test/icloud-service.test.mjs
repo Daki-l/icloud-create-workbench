@@ -50,7 +50,7 @@ test("导入 CK 后返回完整 Apple ID", async () => {
   try {
     const stored = await context.service.importAccount("Cookie: X-APPLE-SECRET=value", "auto");
     const publicAccount = context.repositories.getAccount(stored.id);
-    assert.equal(publicAccount.appleIdMasked, "owner@example.com");
+    assert.equal(publicAccount.appleId, "owner@example.com");
     assert.equal("cookieEncrypted" in publicAccount, false);
     assert.equal(context.calls[0].command, "validate");
   } finally { context.cleanup(); }
@@ -75,11 +75,11 @@ test("历史脱敏账号过期后不再显示星号 Apple ID", () => {
   const context = createContext();
   try {
     const account = context.repositories.upsertAccount({
-      identityKey: "legacy", appleIdMasked: "ow***@example.com", dsid: "legacy", displayName: "历史账号",
+      identityKey: "legacy", appleId: "ow***@example.com", dsid: "legacy", displayName: "历史账号",
       region: "global", userPartition: "68", maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted"
     });
     context.repositories.markAccountExpired(account.id);
-    assert.equal(context.repositories.getAccount(account.id).appleIdMasked, "无法获取（CK 已过期）");
+    assert.equal(context.repositories.getAccount(account.id).appleId, "无法获取（CK 已过期）");
   } finally { context.cleanup(); }
 });
 
@@ -111,6 +111,20 @@ test("生成数量超过五个时由后端拒绝", async () => {
   try {
     const account = await context.service.importAccount("X-APPLE-SECRET=value", "auto");
     await assert.rejects(() => context.service.generate(account.id, 6, "changsheng"), error => error.status === 400);
+  } finally { context.cleanup(); }
+});
+
+test("同一 CK 只能占用一个活动批次任务名额", async () => {
+  const context = createContext();
+  try {
+    const account = await context.service.importAccount("X-APPLE-SECRET=value", "auto");
+    const first = context.repositories.createJobWithLabels(account.id, "first", 1);
+    assert.deepEqual(first.labels, ["first-001"]);
+    assert.throws(
+      () => context.repositories.createJobWithLabels(account.id, "second", 1),
+      error => error.status === 409
+    );
+    assert.equal(context.repositories.getAccountInternal(account.id).label_sequence, 1);
   } finally { context.cleanup(); }
 });
 
