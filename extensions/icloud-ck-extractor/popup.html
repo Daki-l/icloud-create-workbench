@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>iCloud CK 提取器</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="panel">
+      <header class="header">
+        <div class="logo">CK</div>
+        <div>
+          <h1>iCloud CK 提取器</h1>
+          <p>本机调试工具</p>
+        </div>
+      </header>
+
+      <section class="tip">
+        登录 iCloud+ 后打开“隐藏邮件地址”，插件会自动捕获准确 CK；也可点击“读取当前 CK”。
+      </section>
+
+      <div class="actions two-columns">
+        <button id="openButton" class="button secondary" type="button">打开 iCloud+</button>
+        <button id="extractButton" class="button primary" type="button">读取当前 CK</button>
+      </div>
+
+      <section class="result">
+        <div class="result-heading">
+          <label for="cookieOutput">CK 内容</label>
+          <span id="metaText">尚未提取</span>
+        </div>
+        <textarea id="cookieOutput" readonly spellcheck="false" placeholder="捕获或读取后显示在这里"></textarea>
+      </section>
+
+      <div class="actions">
+        <button id="copyButton" class="button primary wide" type="button" disabled>复制 CK</button>
+        <button id="clearButton" class="button text" type="button" disabled>清除</button>
+      </div>
+
+      <p id="statusText" class="status" role="status">等待提取</p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

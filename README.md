@@ -31,6 +31,10 @@ JSON 接口返回该隐私邮箱在本地数据库中的最新邮件；暂无邮
 
 ## 获取 iCloud CK
 
+### 调试插件
+
+仓库内置 Chrome / Edge 调试插件：`extensions/icloud-ck-extractor`。在浏览器扩展管理页开启开发者模式并“加载已解压的扩展程序”后，登录 iCloud+、打开“隐藏邮件地址”，即可自动捕获并复制 CK。详细步骤见插件目录内的 `README.md`。
+
 ### 推荐方法：Network 复制为 cURL
 
 请按下面步骤获取：

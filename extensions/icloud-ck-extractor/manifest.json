@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "iCloud CK 提取器",
+  "version": "1.0.0",
+  "description": "从本人已登录的 iCloud 页面提取调试用 Cookie。",
+  "permissions": ["cookies", "storage", "tabs", "webRequest"],
+  "host_permissions": [
+    "https://*.icloud.com/*",
+    "https://*.icloud.com.cn/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "提取 iCloud CK",
+    "default_popup": "popup.html"
+  }
+}

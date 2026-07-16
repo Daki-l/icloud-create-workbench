@@ -1,0 +1,169 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #172033;
+  background: #f4f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 380px;
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, rgba(49, 130, 246, 0.16), transparent 42%),
+    #f4f7fb;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+.panel {
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 14px;
+  color: #fff;
+  background: linear-gradient(145deg, #5aa7ff, #176ce0);
+  box-shadow: 0 8px 18px rgba(23, 108, 224, 0.25);
+  font-weight: 800;
+}
+
+h1 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.header p {
+  margin: 3px 0 0;
+  color: #718096;
+  font-size: 12px;
+}
+
+.tip {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #dce8f8;
+  border-radius: 12px;
+  color: #49617d;
+  background: rgba(255, 255, 255, 0.78);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.two-columns .button {
+  flex: 1;
+}
+
+.button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.primary {
+  color: #fff;
+  background: #176ce0;
+}
+
+.primary:not(:disabled):hover {
+  background: #0e5fc9;
+}
+
+.secondary {
+  color: #24558f;
+  background: #e5eef9;
+}
+
+.text {
+  color: #607089;
+  background: transparent;
+}
+
+.wide {
+  flex: 1;
+}
+
+.result {
+  margin-top: 16px;
+}
+
+.result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 7px;
+  font-size: 12px;
+}
+
+.result-heading label {
+  font-weight: 700;
+}
+
+.result-heading span {
+  color: #718096;
+}
+
+textarea {
+  width: 100%;
+  height: 132px;
+  resize: vertical;
+  padding: 11px;
+  border: 1px solid #cfdaea;
+  border-radius: 10px;
+  outline: none;
+  color: #25344d;
+  background: #fff;
+  font: 11px/1.55 Consolas, "SFMono-Regular", monospace;
+}
+
+textarea:focus {
+  border-color: #5c9df0;
+  box-shadow: 0 0 0 3px rgba(23, 108, 224, 0.1);
+}
+
+.status {
+  min-height: 18px;
+  margin: 12px 0 0;
+  color: #607089;
+  font-size: 12px;
+  text-align: center;
+}
+
+.status.error {
+  color: #c43d4b;
+}
+
+.status.success {
+  color: #16815d;
+}
