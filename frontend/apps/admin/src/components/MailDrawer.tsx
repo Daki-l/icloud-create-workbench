@@ -73,6 +73,7 @@ const MailDrawer = (props: MailDrawerProps) => {
 
   const message = detailQuery.data?.message;
   const messages = listQuery.data?.messages || [];
+  const dialogSubtitle = email || undefined;
 
   /** 渲染单封邮件详情。 */
   function renderDetail() {
@@ -104,7 +105,9 @@ const MailDrawer = (props: MailDrawerProps) => {
         {message.bodyHtml && viewMode === 'html' ? (
           <MailHtmlPreview html={message.bodyHtml} title={message.subject || '邮件正文'} />
         ) : (
-          <Text className="workbench-code">{message.bodyText || message.preview || '无纯文本正文'}</Text>
+          <Text as="div" className="workbench-code workbench-mail-text">
+            {message.bodyText || message.preview || '无纯文本正文'}
+          </Text>
         )}
       </VStack>
     );
@@ -183,7 +186,8 @@ const MailDrawer = (props: MailDrawerProps) => {
         footer={<LayoutFooter>{renderFooter()}</LayoutFooter>}
         header={
           <DialogHeader
-            title={selectedId ? '邮件详情' : `${email || '隐私邮箱'} · 邮件`}
+            subtitle={dialogSubtitle}
+            title={selectedId ? '邮件详情' : '关联邮件'}
             onOpenChange={next => {
               if (!next) close();
             }}

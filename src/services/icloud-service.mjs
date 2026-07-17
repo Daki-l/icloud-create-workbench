@@ -3,6 +3,24 @@ import { accountIdentityKey } from "../repositories.mjs";
 
 /** 创建 iCloud 账号与生成任务服务。 */
 export function createIcloudService({ config, repositories, callBridge }) {
+  /** 判断错误是否表示当前 CK 的全局会话已经失效。 */
+  function isExpiredSessionError(message) {
+    return /invalid global session|session.*expired|global session/i.test(String(message || ""));
+  }
+
+  /** 将会话失效错误转换为统一的 CK 过期业务错误。 */
+  function toExpiredAccountError(accountId, error) {
+    repositories.markAccountExpired(accountId);
+    return Object.assign(new Error(error.message || "CK 已失效，请先更新 CK"), { status: 410, accountExpired: true });
+  }
+
+  /** 拒绝继续使用已经过期的 CK 执行敏感操作。 */
+  function ensureAccountActive(account) {
+    if (account.status === "expired") {
+      throw Object.assign(new Error("CK 已过期，请先更新 CK"), { status: 409, accountExpired: true });
+    }
+  }
+
   /** 校验 CK 并转换为可持久化账号数据。 */
   async function prepareAccount(cookieInput, region = "auto") {
     if (!String(cookieInput || "").trim()) throw Object.assign(new Error("CK 不能为空"), { status: 400 });
@@ -31,7 +49,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
     return repositories.upsertAccount(await prepareAccount(cookieInput, region));
   }
 
-  /** 更新指定账号的 CK，并确保它仍代表同一个账号。 */
+  /** 更新指定账号的 CK，并确保它仍代表同一账号。 */
   async function updateCookie(accountId, cookieInput, region) {
     const existing = repositories.getAccountInternal(accountId);
     if (!existing || existing.status === "deleted") throw Object.assign(new Error("账号不存在"), { status: 404 });
@@ -68,6 +86,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
   /** 从 Apple 同步已有隐藏邮箱。 */
   async function syncAddresses(accountId) {
     const { account, cookie } = accountWithCookie(accountId);
+    ensureAccountActive(account);
     let result;
     try {
       result = await callBridge(config, "list", {
@@ -76,6 +95,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
         maildomainHost: account.maildomain_host
       });
     } catch (error) {
+      if (isExpiredSessionError(error.message)) throw toExpiredAccountError(accountId, error);
       throw Object.assign(new Error(error.message), { status: 400 });
     }
     const activeRows = result.addresses.filter(item => item.active);
@@ -87,6 +107,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
   /** 创建并同步执行一批生成任务。 */
   async function generate(accountId, requestedCount, requestedPrefix) {
     const { account, cookie } = accountWithCookie(accountId);
+    ensureAccountActive(account);
     const count = Number(requestedCount || config.batchLimit);
     if (!Number.isInteger(count) || count < 1 || count > config.batchLimit) {
       throw Object.assign(new Error(`每批只能生成 1-${config.batchLimit} 个`), { status: 400 });
@@ -112,6 +133,7 @@ export function createIcloudService({ config, repositories, callBridge }) {
         labels
       }, Math.max(90_000, count * 45_000));
     } catch (error) {
+      if (isExpiredSessionError(error.message)) throw toExpiredAccountError(accountId, error);
       result = { generated: [], errors: [{ label: labels[0], error: error.message }] };
     }
     repositories.upsertAddresses(accountId, job.id, result.generated, "generated");

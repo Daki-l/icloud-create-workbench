@@ -13,16 +13,29 @@ function createContext() {
   const db = createDatabase(join(directory, "test.db"));
   const repositories = createRepositories(db);
   const account = repositories.upsertAccount({
-    identityKey: "campaign-account", appleId: "test@example.com", dsid: "1", displayName: "测试",
-    region: "global", userPartition: "68", maildomainHost: "p68-maildomainws.icloud.com", cookieEncrypted: "encrypted"
+    identityKey: "campaign-account",
+    appleId: "test@example.com",
+    dsid: "1",
+    displayName: "测试",
+    region: "global",
+    userPartition: "68",
+    maildomainHost: "p68-maildomainws.icloud.com",
+    cookieEncrypted: "encrypted"
   });
   let sequence = 0;
+  let generateError = null;
+
   const icloudService = {
     /** 模拟每批生成并写入隐藏邮箱，同时设置六十分钟冷却。 */
     async generate(accountId, count, prefix) {
+      if (generateError) throw generateError;
       const generated = Array.from({ length: count }, () => {
         sequence++;
-        return { email: `campaign-${sequence}@icloud.com`, label: `${prefix}-${sequence}`, createdAt: new Date().toISOString() };
+        return {
+          email: `campaign-${sequence}@icloud.com`,
+          label: `${prefix}-${sequence}`,
+          createdAt: new Date().toISOString()
+        };
       });
       repositories.upsertAddresses(accountId, null, generated, "generated");
       db.prepare("UPDATE icloud_accounts SET cooldown_until = ? WHERE id = ?")
@@ -30,12 +43,26 @@ function createContext() {
       return { generated, errors: [] };
     }
   };
+
   const service = createCampaignService({
-    config: { targetDefault: 700, batchLimit: 5, cooldownMinutes: 60, retryMinutes: 5 }, repositories, icloudService
+    config: { targetDefault: 700, batchLimit: 5, cooldownMinutes: 60, retryMinutes: 5 },
+    repositories,
+    icloudService
   });
+
+  /** 设置下一次生成时抛出的错误。 */
+  function setGenerateError(error) {
+    generateError = error;
+  }
+
   /** 清理测试数据库和临时目录。 */
-  function cleanup() { service.close(); db.close(); rmSync(directory, { recursive: true, force: true }); }
-  return { account, repositories, service, cleanup };
+  function cleanup() {
+    service.close();
+    db.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+
+  return { account, repositories, service, setGenerateError, cleanup };
 }
 
 test("生产目标默认库存为 700 并立即执行首批五个", async () => {
@@ -49,7 +76,9 @@ test("生产目标默认库存为 700 并立即执行首批五个", async () => 
     assert.equal(stored.generatedCount, 5);
     assert.equal(stored.status, "running");
     assert.ok(stored.nextRunAt);
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
 });
 
 test("生产目标支持停止和继续", () => {
@@ -60,7 +89,9 @@ test("生产目标支持停止和继续", () => {
     assert.equal(context.service.listCampaigns(10)[0].status, "stopped");
     context.service.resumeCampaign(campaign.id);
     assert.equal(context.service.listCampaigns(10)[0].status, "running");
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
 });
 
 test("同一 CK 只能保留一个未完成生产目标", () => {
@@ -76,35 +107,51 @@ test("同一 CK 只能保留一个未完成生产目标", () => {
       () => context.service.createCampaign({ accountId: context.account.id, targetTotal: 20 }),
       error => error.status === 409
     );
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
 });
 
 test("数据库唯一索引防止并发绕过业务预检", () => {
   const context = createContext();
   try {
     context.repositories.createCampaign({
-      accountId: context.account.id, targetTotal: 10, batchSize: 5,
-      labelPrefix: "first", nextRunAt: new Date().toISOString()
+      accountId: context.account.id,
+      targetTotal: 10,
+      batchSize: 5,
+      labelPrefix: "first",
+      nextRunAt: new Date().toISOString()
     });
     assert.throws(
       () => context.repositories.createCampaign({
-        accountId: context.account.id, targetTotal: 20, batchSize: 5,
-        labelPrefix: "second", nextRunAt: new Date().toISOString()
+        accountId: context.account.id,
+        targetTotal: 20,
+        batchSize: 5,
+        labelPrefix: "second",
+        nextRunAt: new Date().toISOString()
       }),
       error => error.status === 409 && error.message === "该 CK 已有未结束任务"
     );
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
 });
 
 test("生产目标可修改后续批次标签前缀并同步 CK 默认值", () => {
   const context = createContext();
   try {
-    const campaign = context.service.createCampaign({ accountId: context.account.id, targetTotal: 10, labelPrefix: "old-prefix" });
+    const campaign = context.service.createCampaign({
+      accountId: context.account.id,
+      targetTotal: 10,
+      labelPrefix: "old-prefix"
+    });
     const result = context.service.updateLabelPrefix(campaign.id, { labelPrefix: "new_prefix" });
     assert.equal(result.labelPrefix, "new_prefix");
     assert.equal(context.service.listCampaigns(10)[0].labelPrefix, "new_prefix");
     assert.equal(context.repositories.getAccountInternal(context.account.id).label_prefix, "new_prefix");
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
 });
 
 test("删除生产目标时保留已经生成的邮箱库存", async () => {
@@ -116,5 +163,35 @@ test("删除生产目标时保留已经生成的邮箱库存", async () => {
     context.service.deleteCampaign(campaign.id);
     assert.equal(context.service.listCampaigns(10).length, 0);
     assert.equal(context.repositories.countAddresses(context.account.id), 5);
-  } finally { context.cleanup(); }
+  } finally {
+    context.cleanup();
+  }
+});
+
+test("失效 CK 的生产目标会自动停止，避免五分钟后继续重试", async () => {
+  const context = createContext();
+  try {
+    const campaign = context.service.createCampaign({ accountId: context.account.id, targetTotal: 10 });
+    context.setGenerateError(Object.assign(new Error("Invalid global session"), { status: 410, accountExpired: true }));
+    await context.service.wake();
+    const stored = context.service.listCampaigns(10).find(item => item.id === campaign.id);
+    assert.equal(stored.status, "stopped");
+    assert.equal(stored.nextRunAt, null);
+    assert.equal(stored.lastError, "Invalid global session");
+  } finally {
+    context.cleanup();
+  }
+});
+
+test("已过期 CK 不能新建生产目标", () => {
+  const context = createContext();
+  try {
+    context.repositories.markAccountExpired(context.account.id);
+    assert.throws(
+      () => context.service.createCampaign({ accountId: context.account.id, targetTotal: 10 }),
+      error => error.status === 409 && error.accountExpired === true
+    );
+  } finally {
+    context.cleanup();
+  }
 });

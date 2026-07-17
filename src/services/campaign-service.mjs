@@ -3,7 +3,7 @@ export function createCampaignService({ config, repositories, icloudService }) {
   let ticking = false;
   let timer = null;
 
-  /** 计算账号下一次允许执行的时间。 */
+  /** 计算账号下一次允许运行的时间。 */
   function nextAllowedTime(account) {
     const cooldown = new Date(account?.cooldown_until || 0).getTime();
     return new Date(Math.max(Date.now(), Number.isFinite(cooldown) ? cooldown : 0)).toISOString();
@@ -18,10 +18,20 @@ export function createCampaignService({ config, repositories, icloudService }) {
     return labelPrefix;
   }
 
+  /** 拒绝对不存在、已删除或已过期的 CK 创建/恢复任务。 */
+  function ensureCampaignAccountAvailable(account) {
+    if (!account || account.status === "deleted") {
+      throw Object.assign(new Error("CK 账号不存在"), { status: 404 });
+    }
+    if (account.status === "expired") {
+      throw Object.assign(new Error("CK 已过期，请先更新 CK"), { status: 409, accountExpired: true });
+    }
+  }
+
   /** 创建一个默认目标为 700 的持续生产任务。 */
   function createCampaign(input) {
     const account = repositories.getAccountInternal(input.accountId);
-    if (!account || account.status === "deleted") throw Object.assign(new Error("CK 账号不存在"), { status: 404 });
+    ensureCampaignAccountAvailable(account);
     if (repositories.findOpenCampaign(input.accountId)) {
       throw Object.assign(new Error("该 CK 已有未完成的生产目标，请停止或继续现有任务"), { status: 409 });
     }
@@ -75,6 +85,7 @@ export function createCampaignService({ config, repositories, icloudService }) {
     const campaign = repositories.getCampaignInternal(id);
     if (!campaign) throw Object.assign(new Error("生产目标不存在"), { status: 404 });
     const account = repositories.getAccountInternal(campaign.account_id);
+    ensureCampaignAccountAvailable(account);
     if (!repositories.resumeCampaign(id, nextAllowedTime(account))) {
       throw Object.assign(new Error("该生产目标当前不能继续"), { status: 409 });
     }
@@ -100,6 +111,11 @@ export function createCampaignService({ config, repositories, icloudService }) {
       if (complete) repositories.completeCampaign(campaign.id);
     } catch (error) {
       if (error.status === 404) return repositories.stopCampaign(campaign.id);
+      if (error.accountExpired || error.status === 410) {
+        repositories.recordCampaignRun(campaign.id, 0, null, error.message);
+        repositories.stopCampaign(campaign.id);
+        return;
+      }
       const nextRunAt = error.cooldownUntil || new Date(Date.now() + config.retryMinutes * 60_000).toISOString();
       repositories.recordCampaignRun(campaign.id, 0, nextRunAt, error.message);
     }

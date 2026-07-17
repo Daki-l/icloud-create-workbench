@@ -60,8 +60,18 @@ body {
   background: #ffffff;
 }
 
+.workbench-mail-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
 @media (max-width: 640px) {
   .workbench-page {
     min-width: 0;
+  }
+
+  .workbench-mail-frame {
+    height: min(420px, 52vh);
   }
 }

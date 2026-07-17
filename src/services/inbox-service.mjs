@@ -17,6 +17,35 @@ export function extractCode(text) {
   return "";
 }
 
+/** 规范化邮件内联资源 Content-ID，便于匹配 cid: 引用。 */
+function normalizeCid(value) {
+  const raw = String(value || "").trim().replace(/^<|>$/g, "");
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw).toLowerCase();
+  } catch {
+    return raw.toLowerCase();
+  }
+}
+
+/** 将 HTML 中的 cid: 内联图片替换为浏览器可直接显示的 data URL。 */
+export function inlineAttachmentCidImages(html, attachments) {
+  const sourceHtml = String(html || "");
+  if (!sourceHtml || !Array.isArray(attachments) || !attachments.length) return sourceHtml;
+  const cidToDataUrl = new Map();
+  for (const attachment of attachments) {
+    const cid = normalizeCid(attachment?.contentId);
+    const contentType = String(attachment?.contentType || "");
+    if (!cid || !contentType.startsWith("image/") || !Buffer.isBuffer(attachment?.content)) continue;
+    cidToDataUrl.set(cid, `data:${contentType};base64,${attachment.content.toString("base64")}`);
+  }
+  if (!cidToDataUrl.size) return sourceHtml;
+  return sourceHtml.replace(/cid:([^"')\s>]+)/gi, (full, cidValue) => {
+    const dataUrl = cidToDataUrl.get(normalizeCid(cidValue));
+    return dataUrl || full;
+  });
+}
+
 /** 创建全局 IMAP 收件服务。 */
 export function createInboxService({ config, repositories }) {
   const activeSyncs = new Set();
@@ -82,7 +111,8 @@ export function createInboxService({ config, repositories }) {
   async function saveMessage(accountId, mailbox, message, updateOnly = false) {
     const parsed = await simpleParser(message.source);
     const bodyText = String(parsed.text || "").slice(0, 100_000);
-    const bodyHtml = typeof parsed.html === "string" ? parsed.html.slice(0, 300_000) : "";
+    const resolvedHtml = inlineAttachmentCidImages(parsed.html, parsed.attachments);
+    const bodyHtml = typeof resolvedHtml === "string" ? resolvedHtml.slice(0, 300_000) : "";
     const htmlText = bodyHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
     const searchable = `${parsed.headers?.get("delivered-to") || ""}\n${parsed.to?.text || ""}\n${bodyText}\n${htmlText}`;
     return repositories.insertMessage(accountId, {
