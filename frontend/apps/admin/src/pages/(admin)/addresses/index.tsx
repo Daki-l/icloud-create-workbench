@@ -91,6 +91,11 @@ const AddressesPage = () => {
     setFilters(draftFilters);
   }
 
+  /** 导出当前输入的筛选结果。 */
+  function exportFilteredAddresses() {
+    window.location.assign(`/api/addresses/export?${queryString({ ...draftFilters })}`);
+  }
+
   /** 批量修改选中邮箱状态。 */
   async function batchState(state: string) {
     if (!selected.size) {
@@ -176,7 +181,6 @@ const AddressesPage = () => {
     <Section className="workbench-page" padding={6}>
       <VStack gap={5}>
         <PageHeader
-          actions={<Button label="导出 CSV" onClick={() => window.location.assign('/api/addresses/export')} />}
           description="筛选、批量管理邮箱状态并查看关联邮件。"
           title="邮箱库存"
         />
@@ -214,6 +218,7 @@ const AddressesPage = () => {
               onEnter={applyFilters}
             />
             <Button label="查询" variant="primary" onClick={applyFilters} />
+            <Button label="筛选导出" onClick={exportFilteredAddresses} />
           </HStack>
           <HStack gap={2} wrap="wrap">
             <Button label="批量已使用" onClick={() => batchState('used')} />

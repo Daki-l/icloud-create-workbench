@@ -24,7 +24,11 @@ export function createAddressRouter(repositories, publicMailService) {
 
   /** 下载当前筛选结果的 UTF-8 CSV。 */
   router.get("/export", (req, res) => {
-    const rows = repositories.listAddresses({ accountId: req.query.accountId, state: req.query.state });
+    const rows = repositories.listAddresses({
+      accountId: req.query.accountId,
+      state: req.query.state,
+      search: String(req.query.search || "").slice(0, 100)
+    });
     const csv = ["邮箱,标签,状态,来源,Apple ID,创建时间", ...rows.map(row => [
       row.email, row.label, row.state, row.source, row.appleId, row.createdAt
     ].map(csvCell).join(","))].join("\r\n");
