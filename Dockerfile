@@ -15,11 +15,16 @@ RUN pnpm install --frozen-lockfile --filter skyroc-admin... \
 FROM python:3.12-slim-bookworm AS runtime
 COPY --from=node:24-bookworm-slim /usr/local/ /usr/local/
 ENV NODE_ENV=production \
+    TZ=Asia/Shanghai \
     PATH=/opt/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONUTF8=1
 WORKDIR /app
-RUN useradd --create-home --uid 10001 app && python -m venv /opt/venv
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tzdata \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 app \
+    && python -m venv /opt/venv
 COPY vendor/hidemyemail-generator ./vendor/hidemyemail-generator
 RUN /opt/venv/bin/pip install --no-cache-dir ./vendor/hidemyemail-generator
 COPY --from=node-deps /app/node_modules ./node_modules

@@ -37,6 +37,19 @@ export function createAddressRouter(repositories, publicMailService) {
     res.send(`\uFEFF${csv}`);
   });
 
+  /** 下载当前筛选结果的 MMA 文本，每行包含邮箱和标签。 */
+  router.get("/export-mma", (req, res) => {
+    const rows = repositories.listAddresses({
+      accountId: req.query.accountId,
+      state: req.query.state,
+      search: String(req.query.search || "").slice(0, 100)
+    });
+    const content = rows.map(row => `${row.email}----${row.label}`).join("\r\n");
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=hidden-addresses-mma.txt");
+    res.send(`\uFEFF${content}`);
+  });
+
   /** 批量修改邮箱状态。 */
   router.patch("/batch-state", (req, res) => {
     const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(String))].slice(0, 200) : [];

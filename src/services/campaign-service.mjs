@@ -18,6 +18,11 @@ export function createCampaignService({ config, repositories, icloudService }) {
     return labelPrefix;
   }
 
+  /** 从 Apple ID 生成符合标签规则的默认前缀。 */
+  function defaultLabelPrefix(appleId) {
+    return String(appleId || "").split("@")[0].replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 24) || "icloud";
+  }
+
   /** 拒绝对不存在、已删除或已过期的 CK 创建/恢复任务。 */
   function ensureCampaignAccountAvailable(account) {
     if (!account || account.status === "deleted") {
@@ -37,7 +42,7 @@ export function createCampaignService({ config, repositories, icloudService }) {
     }
     const targetTotal = Number(input.targetTotal || config.targetDefault);
     const batchSize = Number(input.batchSize || config.batchLimit);
-    const labelPrefix = normalizeLabelPrefix(input.labelPrefix || account.label_prefix || "changsheng");
+    const labelPrefix = normalizeLabelPrefix(input.labelPrefix || defaultLabelPrefix(account.apple_id));
     if (!Number.isInteger(targetTotal) || targetTotal < 1 || targetTotal > 700) {
       throw Object.assign(new Error("目标库存必须是 1-700 之间的整数"), { status: 400 });
     }

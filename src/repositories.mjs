@@ -53,12 +53,14 @@ export function createRepositories(db) {
       return getAccountInternal(existing.id);
     }
     const id = randomUUID();
+    const labelPrefix = String(input.appleId || "").split("@")[0]
+      .replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 24) || "icloud";
     db.prepare(`INSERT INTO icloud_accounts
       (id, apple_id, identity_key, dsid, display_name, region, user_partition, maildomain_host,
        cookie_encrypted, status, label_prefix, label_sequence, last_checked_at, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'changsheng', 0, ?, ?, ?)`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, 0, ?, ?, ?)`)
       .run(id, input.appleId, input.identityKey, input.dsid || "", input.displayName || "", input.region,
-        input.userPartition || "", input.maildomainHost || "", input.cookieEncrypted, now, now, now);
+        input.userPartition || "", input.maildomainHost || "", input.cookieEncrypted, labelPrefix, now, now, now);
     return getAccountInternal(id);
   }
 

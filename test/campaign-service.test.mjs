@@ -68,8 +68,9 @@ function createContext() {
 test("生产目标默认库存为 700 并立即执行首批五个", async () => {
   const context = createContext();
   try {
-    const campaign = context.service.createCampaign({ accountId: context.account.id, labelPrefix: "changsheng" });
+    const campaign = context.service.createCampaign({ accountId: context.account.id });
     assert.equal(campaign.targetTotal, 700);
+    assert.equal(campaign.labelPrefix, "test");
     await context.service.wake();
     const stored = context.service.listCampaigns(10)[0];
     assert.equal(stored.currentTotal, 5);

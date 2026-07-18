@@ -47,9 +47,14 @@ interface CampaignFormValues {
 const DEFAULT_CAMPAIGN: CampaignFormValues = {
   accountId: '',
   batchSize: 5,
-  labelPrefix: 'changsheng',
+  labelPrefix: '',
   targetTotal: 700
 };
+
+/** 从 Apple ID 生成符合标签规则的默认前缀。 */
+function defaultLabelPrefix(appleId: string) {
+  return appleId.split('@')[0].replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 24) || 'icloud';
+}
 
 /** 渲染持续生产目标、停止继续控制和批次记录。 */
 const TasksPage = () => {
@@ -258,7 +263,12 @@ const TasksPage = () => {
                 value={formValues.accountId}
                 onChange={accountId => {
                   setAccountError('');
-                  setFormValues(current => ({ ...current, accountId: accountId || '' }));
+                  const account = accounts.data?.accounts.find(item => item.id === accountId);
+                  setFormValues(current => ({
+                    ...current,
+                    accountId: accountId || '',
+                    labelPrefix: account ? defaultLabelPrefix(account.appleId) : ''
+                  }));
                 }}
               />
               <NumberInput

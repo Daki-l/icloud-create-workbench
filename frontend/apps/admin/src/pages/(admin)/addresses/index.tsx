@@ -96,6 +96,11 @@ const AddressesPage = () => {
     window.location.assign(`/api/addresses/export?${queryString({ ...draftFilters })}`);
   }
 
+  /** 按 MMA 文本格式导出当前输入的筛选结果。 */
+  function exportFilteredMmaAddresses() {
+    window.location.assign(`/api/addresses/export-mma?${queryString({ ...draftFilters })}`);
+  }
+
   /** 批量修改选中邮箱状态。 */
   async function batchState(state: string) {
     if (!selected.size) {
@@ -219,6 +224,7 @@ const AddressesPage = () => {
             />
             <Button label="查询" variant="primary" onClick={applyFilters} />
             <Button label="筛选导出" onClick={exportFilteredAddresses} />
+            <Button label="筛选导出 MMA" onClick={exportFilteredMmaAddresses} />
           </HStack>
           <HStack gap={2} wrap="wrap">
             <Button label="批量已使用" onClick={() => batchState('used')} />

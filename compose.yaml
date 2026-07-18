@@ -5,6 +5,8 @@ services:
     image: icloud-create-workbench:local
     env_file:
       - .env
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
       - "4173:4173"
     volumes:
