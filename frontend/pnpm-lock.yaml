@@ -163,15 +163,9 @@ catalogs:
     '@astryxdesign/theme-neutral':
       specifier: 0.1.4
       version: 0.1.4
-    '@iconify/json':
-      specifier: ^2.2.416
-      version: 2.2.442
     '@iconify/react':
       specifier: ^6.0.2
       version: 6.0.2
-    '@iconify/types':
-      specifier: ^2.0.0
-      version: 2.0.0
     '@iconify/utils':
       specifier: ^3.1.0
       version: 3.1.0
@@ -341,9 +335,6 @@ importers:
       '@skyroc/axios':
         specifier: workspace:*
         version: link:../../packages/@core/axios
-      '@skyroc/color':
-        specifier: workspace:*
-        version: link:../../packages/@core/color
       '@skyroc/core-state':
         specifier: workspace:*
         version: link:../../packages/@core/state
@@ -362,9 +353,6 @@ importers:
       '@skyroc/web-admin-layouts':
         specifier: workspace:*
         version: link:../../packages/web/admin-layouts
-      '@skyroc/web-admin-notification':
-        specifier: workspace:*
-        version: link:../../packages/web/admin-notification
       '@skyroc/web-admin-runtime':
         specifier: workspace:*
         version: link:../../packages/web/admin-runtime
@@ -377,9 +365,6 @@ importers:
       '@skyroc/web-ui-antd':
         specifier: workspace:*
         version: link:../../packages/web/ui/antd
-      '@skyroc/web-ui-compose':
-        specifier: workspace:*
-        version: link:../../packages/web/ui/compose
       '@stylexjs/stylex':
         specifier: catalog:ui-shared
         version: 0.18.3
@@ -432,21 +417,12 @@ importers:
         specifier: catalog:utils
         version: 4.3.6
     devDependencies:
-      '@iconify/json':
-        specifier: catalog:ui-shared
-        version: 2.2.442
       '@iconify/react':
         specifier: catalog:ui-shared
         version: 6.0.2(react@19.1.0)
-      '@iconify/types':
-        specifier: catalog:ui-shared
-        version: 2.0.0
       '@sa/uno-config':
         specifier: workspace:*
         version: link:../../internal/uno-config
-      '@skyroc/types':
-        specifier: workspace:*
-        version: link:../../packages/@core/types
       '@skyroc/web-admin-vite':
         specifier: workspace:*
         version: link:../../packages/web/admin-vite
@@ -2420,9 +2396,6 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
-
-  '@iconify/json@2.2.442':
-    resolution: {integrity: sha512-JvAEHLuOu9aS1Ch0kLCs6hlltRUFrs7JVD0Ic6Xfxj/JOkJCCwW0dRCHILEwkWFXrKTmDAP5XTUsCItsfYxdkg==}
 
   '@iconify/react@6.0.2':
     resolution: {integrity: sha512-SMmC2sactfpJD427WJEDN6PMyznTFMhByK9yLW0gOTtnjzzbsi/Ke/XqsumsavFPwNiXs8jSiYeZTmLCLwO+Fg==}
@@ -9641,11 +9614,6 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
-
-  '@iconify/json@2.2.442':
-    dependencies:
-      '@iconify/types': 2.0.0
-      pathe: 2.0.3
 
   '@iconify/react@6.0.2(react@19.1.0)':
     dependencies:
