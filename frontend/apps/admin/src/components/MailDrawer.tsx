@@ -171,7 +171,7 @@ const MailDrawer = (props: MailDrawerProps) => {
     <Dialog
       isOpen={open}
       maxHeight="90vh"
-      padding={0}
+      padding={5}
       width="min(960px, 94vw)"
       onOpenChange={next => {
         if (!next) close();
@@ -179,7 +179,7 @@ const MailDrawer = (props: MailDrawerProps) => {
     >
       <Layout
         content={
-          <LayoutContent isScrollable padding={5}>
+          <LayoutContent isScrollable>
             {selectedId ? renderDetail() : renderList()}
           </LayoutContent>
         }
