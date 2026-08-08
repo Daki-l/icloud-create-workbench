@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
-import { sessionCookieOptions, signAdminToken, verifyAdminToken, verifyPassword, verifyPlainPassword } from "../security.mjs";
+import { checkAdminPassword, sessionCookieOptions, signAdminToken, verifyAdminToken } from "../security.mjs";
 
 /** 创建管理员鉴权路由。 */
-export function createAuthRouter(config) {
+export function createAuthRouter({ config, repositories }) {
   const router = Router();
   const loginLimiter = rateLimit({
     windowMs: 15 * 60_000,
@@ -18,9 +18,12 @@ export function createAuthRouter(config) {
   router.post("/login", loginLimiter, (req, res) => {
     const usernameOk = String(req.body?.username || "") === config.adminUsername;
     const password = req.body?.password || "";
-    const passwordOk = config.adminPassword
-      ? verifyPlainPassword(password, config.adminPassword)
-      : verifyPassword(password, config.adminPasswordHash);
+    const overrideHash = repositories.getSetting("adminPasswordHash");
+    const passwordOk = checkAdminPassword(password, {
+      adminPassword: config.adminPassword,
+      adminPasswordHash: config.adminPasswordHash,
+      overrideHash
+    });
     if (!usernameOk || !passwordOk) return res.status(401).json({ error: "用户名或密码错误" });
     res.cookie("workbench_admin", signAdminToken(config), sessionCookieOptions(config));
     res.json({ username: config.adminUsername });

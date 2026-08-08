@@ -173,6 +173,15 @@ export function createRepositories(db) {
       .run(new Date().toISOString()).changes;
   }
 
+  /** 清理运行时间超过阈值的僵尸任务：桥梁超时上限仅 225 秒，超过阈值必为中断的僵尸。 */
+  function recoverStaleJobs(staleAfterMs) {
+    const now = new Date().toISOString();
+    const cutoff = new Date(Date.now() - staleAfterMs).toISOString();
+    return db.prepare(`UPDATE generation_jobs SET status = 'failed', error_summary = '运行超时，自动判为僵尸任务', finished_at = ?
+      WHERE status IN ('queued', 'running') AND COALESCE(started_at, created_at) < ?`)
+      .run(now, cutoff).changes;
+  }
+
   /** 判断账号当前是否已有运行任务。 */
   function hasRunningJob(accountId) {
     return Boolean(db.prepare("SELECT 1 FROM generation_jobs WHERE account_id = ? AND status IN ('queued', 'running') LIMIT 1").get(accountId));
@@ -517,14 +526,27 @@ export function createRepositories(db) {
     return { rows, total, page, pageSize };
   }
 
+  /** 读取单个应用设置，不存在返回 null。 */
+  function getSetting(key) {
+    const row = db.prepare("SELECT value FROM app_settings WHERE key = ?").get(key);
+    return row ? row.value : null;
+  }
+
+  /** 写入或更新单个应用设置。 */
+  function setSetting(key, value) {
+    const now = new Date().toISOString();
+    db.prepare(`INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, ?)
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`).run(key, value, now);
+  }
+
   return {
     listAccounts, getAccount, getAccountInternal, upsertAccount, updateAccountCookie, markAccountExpired, deleteAccount, updateMaildomainHost,
-    createJob, createJobWithLabels, allocateLabels, startJob, finishJob, recoverRunningJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
+    createJob, createJobWithLabels, allocateLabels, startJob, finishJob, recoverRunningJobs, recoverStaleJobs, hasRunningJob, listJobs, listAllJobs, pageAllJobs,
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
     getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
     getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,
-    saveInboxConfig, insertMessage, listMessages, pageMessages
+    saveInboxConfig, insertMessage, listMessages, pageMessages, getSetting, setSetting
   };
 }

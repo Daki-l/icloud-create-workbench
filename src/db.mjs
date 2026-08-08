@@ -128,6 +128,11 @@ export function createDatabase(databasePath) {
       last_access_at TEXT,
       FOREIGN KEY(address_id) REFERENCES hidden_addresses(id)
     );
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
     CREATE INDEX IF NOT EXISTS idx_jobs_account ON generation_jobs(account_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_addresses_account ON hidden_addresses(account_id, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_results_job ON generation_results(job_id, created_at);

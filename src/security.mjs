@@ -33,6 +33,12 @@ export function verifyPlainPassword(password, expectedPassword) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
+/** 校验管理员密码：DB 覆盖哈希优先，其次环境变量明文或哈希。 */
+export function checkAdminPassword(password, { adminPassword, adminPasswordHash, overrideHash } = {}) {
+  if (overrideHash) return verifyPassword(password, overrideHash);
+  return adminPassword ? verifyPlainPassword(password, adminPassword) : verifyPassword(password, adminPasswordHash);
+}
+
 /** 将 Base64 密钥转换为固定 32 字节 AES 密钥。 */
 function decodeEncryptionKey(encodedKey) {
   const key = Buffer.from(encodedKey, "base64");

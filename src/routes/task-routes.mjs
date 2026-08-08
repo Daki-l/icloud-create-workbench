@@ -11,5 +11,11 @@ export function createTaskRouter(repositories) {
     const result = repositories.pageAllJobs(page, pageSize);
     res.json({ jobs: result.rows, pagination: { page, pageSize, total: result.total, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) } });
   });
+
+  /** 强制清理运行超过 5 分钟的僵尸生成任务，解除对后续生产的阻塞。 */
+  router.post("/recover", (req, res) => {
+    const recovered = repositories.recoverStaleJobs(5 * 60_000);
+    res.json({ recovered });
+  });
   return router;
 }

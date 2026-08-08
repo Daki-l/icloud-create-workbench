@@ -105,6 +105,15 @@ const TasksPage = () => {
       await queryClient.invalidateQueries({ queryKey: ['accounts'] });
     }
   });
+  const recoverMutation = useMutation({
+    mutationFn: () => apiFetch<{ recovered: number }>('/api/generation-jobs/recover', { body: '{}', method: 'POST' }),
+    onError: error => toast({ body: error instanceof Error ? error.message : '清理僵尸任务失败', type: 'error' }),
+    onSuccess: async data => {
+      toast({ body: data.recovered ? `已清理 ${data.recovered} 个僵尸任务` : '当前没有僵尸任务' });
+      await queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      await queryClient.invalidateQueries({ queryKey: ['campaigns'] });
+    }
+  });
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
@@ -309,7 +318,15 @@ const TasksPage = () => {
             </VStack>
             <Divider />
             <VStack gap={3}>
-              <Heading level={3}>最近批次</Heading>
+              <HStack hAlign="between" vAlign="center">
+                <Heading level={3}>最近批次</Heading>
+                <Button
+                  isLoading={recoverMutation.isPending}
+                  label="清理僵尸任务"
+                  size="sm"
+                  onClick={() => recoverMutation.mutate()}
+                />
+              </HStack>
               {renderJobs()}
             </VStack>
           </VStack>

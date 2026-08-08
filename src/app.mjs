@@ -9,6 +9,7 @@ import { createAddressRouter } from "./routes/address-routes.mjs";
 import { createInboxRouter } from "./routes/inbox-routes.mjs";
 import { createTaskRouter } from "./routes/task-routes.mjs";
 import { createCampaignRouter } from "./routes/campaign-routes.mjs";
+import { createSettingsRouter } from "./routes/settings-routes.mjs";
 import { createMessageRouter } from "./routes/message-routes.mjs";
 import { createPublicMailRouter } from "./routes/public-mail-routes.mjs";
 import { requireAdmin, requireTrustedOrigin } from "./middleware.mjs";
@@ -33,7 +34,7 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   /** 返回不含敏感信息的健康状态。 */
   app.get("/api/health", (req, res) => res.json({ ok: true, service: "icloud-create-workbench" }));
   app.use("/openapi", createPublicMailRouter(config, publicMailService));
-  app.use("/api/auth", createAuthRouter(config));
+  app.use("/api/auth", createAuthRouter({ config, repositories }));
 
   const requireApiAdmin = requireAdmin(config);
   app.use("/api/icloud-accounts", requireApiAdmin, createAccountRouter({ repositories, icloudService }));
@@ -42,6 +43,7 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   app.use("/api/inbox", requireApiAdmin, createInboxRouter({ inboxService, repositories }));
   app.use("/api/generation-jobs", requireApiAdmin, createTaskRouter(repositories));
   app.use("/api/generation-campaigns", requireApiAdmin, createCampaignRouter(campaignService));
+  app.use("/api/settings", requireApiAdmin, createSettingsRouter({ config, repositories }));
 
   for (const directory of ["assets", "css", "js"]) {
     app.use(`/${directory}`, express.static(join(frontendDir, directory), { maxAge: "1h" }));
@@ -64,7 +66,7 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   });
 
   /** 在服务器侧校验管理页面会话并返回 React 入口。 */
-  app.get(["/", "/index.html", "/home", "/overview", "/accounts", "/tasks", "/addresses", "/addresses/:id", "/inbox", "/guide"], (req, res) => {
+  app.get(["/", "/index.html", "/home", "/overview", "/accounts", "/tasks", "/addresses", "/addresses/:id", "/inbox", "/guide", "/settings"], (req, res) => {
     try {
       verifyAdminToken(req.cookies?.workbench_admin, config);
       sendFrontend(req, res);
