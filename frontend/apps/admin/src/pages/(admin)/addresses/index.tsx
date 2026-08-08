@@ -40,6 +40,7 @@ const AddressesPage = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
   const [draftFilters, setDraftFilters] = useState(EMPTY_FILTERS);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -51,10 +52,10 @@ const AddressesPage = () => {
     queryFn: () => apiFetch<{ accounts: Account[] }>('/api/icloud-accounts')
   });
   const addresses = useQuery({
-    queryKey: ['addresses', page, filters],
+    queryKey: ['addresses', page, pageSize, filters],
     queryFn: () =>
       apiFetch<{ addresses: Address[]; pagination: PageInfo }>(
-        `/api/addresses?${queryString({ ...filters, page, pageSize: 20 })}`
+        `/api/addresses?${queryString({ ...filters, page, pageSize })}`
       )
   });
   const publicMutation = useMutation({
@@ -293,11 +294,22 @@ const AddressesPage = () => {
             </div>
           )}
         </Card>
-        <HStack hAlign="end">
+        <HStack hAlign="end" vAlign="center" gap={3}>
+          <Selector
+            isLabelHidden
+            label="每页条数"
+            options={[20, 30, 50, 100].map(value => ({ label: `${value} / 页`, value: String(value) }))}
+            value={String(pageSize)}
+            onChange={next => {
+              setPageSize(Number(next) || 20);
+              setPage(1);
+              setSelected(new Set());
+            }}
+          />
           <Pagination
             label="邮箱库存分页"
             page={addresses.data?.pagination.page || 1}
-            pageSize={20}
+            pageSize={pageSize}
             totalItems={addresses.data?.pagination.total || 0}
             onChange={next => {
               setPage(next);
