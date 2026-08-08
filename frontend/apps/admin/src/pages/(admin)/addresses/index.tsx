@@ -3,6 +3,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Pagination } from '@astryxdesign/core/Pagination';
 import { Section } from '@astryxdesign/core/Section';
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { Selector } from '@astryxdesign/core/Selector';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { HStack, VStack } from '@astryxdesign/core/Stack';
@@ -294,18 +295,20 @@ const AddressesPage = () => {
             </div>
           )}
         </Card>
-        <HStack hAlign="end" vAlign="center" gap={3}>
-          <Selector
-            isLabelHidden
+        <HStack hAlign="end" vAlign="center" gap={3} wrap="wrap">
+          <SegmentedControl
             label="每页条数"
-            options={[20, 30, 50, 100].map(value => ({ label: `${value} / 页`, value: String(value) }))}
             value={String(pageSize)}
             onChange={next => {
               setPageSize(Number(next) || 20);
               setPage(1);
               setSelected(new Set());
             }}
-          />
+          >
+            {[20, 30, 50, 100].map(value => (
+              <SegmentedControlItem key={value} label={String(value)} value={String(value)} />
+            ))}
+          </SegmentedControl>
           <Pagination
             label="邮箱库存分页"
             page={addresses.data?.pagination.page || 1}
