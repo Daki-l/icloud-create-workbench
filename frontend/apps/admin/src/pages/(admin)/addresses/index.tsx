@@ -268,8 +268,6 @@ const AddressesPage = () => {
             <Button label="筛选导出 MMA" onClick={exportFilteredMmaAddresses} />
           </HStack>
           <HStack gap={2} wrap="wrap">
-            <Button label="批量已使用" onClick={() => batchState('used')} />
-            <Button label="批量未使用" onClick={() => batchState('unused')} />
             <Button label="批量垃圾箱" variant="destructive" onClick={() => batchState('trash')} />
             <Button label="批量开放链接" variant="primary" onClick={() => batchPublicAccess(false)} />
             <Button label="批量复制信息" onClick={() => batchPublicAccess(true)} />

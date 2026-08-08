@@ -5,6 +5,19 @@ export function accountIdentityKey(region, dsid, appleId) {
   return createHash("sha256").update(`${region}:${dsid || appleId}`).digest("hex");
 }
 
+/** 邮箱状态按邮件数量派生：垃圾箱保留，有邮件为已使用，否则未使用。 */
+const DERIVED_ADDRESS_STATE = `CASE WHEN h.local_state = 'trash' THEN 'trash'
+  WHEN EXISTS(SELECT 1 FROM inbox_messages m WHERE m.address_id = h.id) THEN 'used'
+  ELSE 'unused' END`;
+
+/** 将状态筛选条件转换为派生状态的 SQL 片段。 */
+function addressStateFilter(state) {
+  if (state === "trash") return "h.local_state = 'trash'";
+  if (state === "used") return "h.local_state <> 'trash' AND EXISTS(SELECT 1 FROM inbox_messages m WHERE m.address_id = h.id)";
+  if (state === "unused") return "h.local_state <> 'trash' AND NOT EXISTS(SELECT 1 FROM inbox_messages m WHERE m.address_id = h.id)";
+  return null;
+}
+
 /** 创建业务数据仓库。 */
 export function createRepositories(db) {
   /** 将活动任务唯一约束冲突转换为统一的业务错误。 */
@@ -341,10 +354,11 @@ export function createRepositories(db) {
     const where = ["1 = 1"];
     const values = [];
     if (filters.accountId) { where.push("h.account_id = ?"); values.push(filters.accountId); }
-    if (["unused", "used", "trash"].includes(filters.state)) { where.push("h.local_state = ?"); values.push(filters.state); }
+    const stateClause = addressStateFilter(filters.state);
+    if (stateClause) where.push(stateClause);
     if (filters.search) { where.push("(h.email LIKE ? OR h.apple_label LIKE ?)"); values.push(`%${filters.search}%`, `%${filters.search}%`); }
     return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
-      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
+      ${DERIVED_ADDRESS_STATE} AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
       FROM hidden_addresses h LEFT JOIN icloud_accounts a ON a.id = h.account_id
       WHERE ${where.join(" AND ")} ORDER BY h.created_at DESC LIMIT 1000`).all(...values);
   }
@@ -354,12 +368,13 @@ export function createRepositories(db) {
     const where = ["1 = 1"];
     const values = [];
     if (filters.accountId) { where.push("h.account_id = ?"); values.push(filters.accountId); }
-    if (["unused", "used", "trash"].includes(filters.state)) { where.push("h.local_state = ?"); values.push(filters.state); }
+    const stateClause = addressStateFilter(filters.state);
+    if (stateClause) where.push(stateClause);
     if (filters.search) { where.push("(h.email LIKE ? OR h.apple_label LIKE ?)"); values.push(`%${filters.search}%`, `%${filters.search}%`); }
     const clause = where.join(" AND ");
     const total = Number(db.prepare(`SELECT COUNT(*) AS count FROM hidden_addresses h WHERE ${clause}`).get(...values).count || 0);
     const rows = db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
-      h.local_state AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
+      ${DERIVED_ADDRESS_STATE} AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
       ,(SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount
       ,(SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt
       ,(SELECT m.code FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestCode
@@ -390,7 +405,7 @@ export function createRepositories(db) {
   /** 读取邮箱详情及其所属 CK 摘要。 */
   function getAddress(id) {
     return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
-      h.local_state AS state, h.source, h.created_at AS createdAt, h.updated_at AS updatedAt,
+      ${DERIVED_ADDRESS_STATE} AS state, h.source, h.created_at AS createdAt, h.updated_at AS updatedAt,
       a.apple_id AS appleId, a.region,
       (SELECT COUNT(*) FROM inbox_messages m WHERE m.address_id = h.id) AS messageCount,
       (SELECT m.received_at FROM inbox_messages m WHERE m.address_id = h.id ORDER BY m.received_at DESC LIMIT 1) AS latestMessageAt,
