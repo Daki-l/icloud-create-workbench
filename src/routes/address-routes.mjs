@@ -59,6 +59,13 @@ export function createAddressRouter(repositories, publicMailService) {
     res.json({ updated: repositories.updateAddressStates(ids, state) });
   });
 
+  /** 批量为已选邮箱确保公开访问链接，返回可用链接与需手动重置的旧链接。 */
+  router.post("/batch-public-access", (req, res) => {
+    const ids = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map(String))].slice(0, 200) : [];
+    if (!ids.length) return res.status(400).json({ error: "请至少选择一个邮箱" });
+    res.status(201).json(publicMailService.batchEnsureAccess(ids));
+  });
+
   /** 返回隐私邮箱详情。 */
   router.get("/:id", (req, res) => {
     const address = repositories.getAddress(req.params.id);
@@ -73,6 +80,13 @@ export function createAddressRouter(repositories, publicMailService) {
     const pageSize = Math.min(100, Math.max(10, Number(req.query.pageSize || 20)));
     const result = repositories.pageAddressMessages(req.params.id, page, pageSize);
     res.json({ messages: result.rows, pagination: { page, pageSize, total: result.total, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) } });
+  });
+
+  /** 查看邮箱已存在的公开访问链接（不轮换）。 */
+  router.get("/:id/public-access", (req, res) => {
+    const links = publicMailService.getAccess(req.params.id);
+    if (!links) return res.status(404).json({ error: "链接为旧版，请重置后查看" });
+    res.json(links);
   });
 
   /** 生成或轮换邮箱公开访问链接。 */

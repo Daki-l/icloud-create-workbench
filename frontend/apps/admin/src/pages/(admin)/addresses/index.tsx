@@ -67,6 +67,16 @@ const AddressesPage = () => {
     }
   });
 
+  /** 查看已存在的公开访问链接（不轮换），旧链接提示需重置。 */
+  async function getLinks(id: string) {
+    try {
+      const data = await apiFetch<PublicLinks>(`/api/addresses/${id}/public-access`);
+      setLinks(data);
+    } catch (error) {
+      toast({ body: error instanceof Error ? error.message : '查看链接失败', type: 'error' });
+    }
+  }
+
   const rows = (addresses.data?.addresses || []) as AddressRow[];
   const selectionPlugin = useTableSelection<AddressRow>({
     getIsAllSelected: () => rows.length > 0 && rows.every(item => selected.has(item.id)),
@@ -120,6 +130,32 @@ const AddressesPage = () => {
     }
   }
 
+  /** 批量为选中邮箱确保公开访问链接，copy 为真时按 address----apiurl 复制到剪贴板。 */
+  async function batchPublicAccess(copy: boolean) {
+    if (!selected.size) {
+      toast({ body: '请先选择邮箱', type: 'error' });
+      return;
+    }
+    try {
+      const data = await apiFetch<{ results: { id: string; email: string; apiUrl: string; viewerUrl: string }[]; skipped: { id: string; email: string }[] }>(
+        '/api/addresses/batch-public-access',
+        { body: JSON.stringify({ ids: [...selected] }), method: 'POST' }
+      );
+      const skippedNote = data.skipped.length ? `，其中 ${data.skipped.length} 个为旧版需手动重置` : '';
+      if (copy) {
+        const text = data.results.map(item => `${item.email}----${item.apiUrl}`).join('\n');
+        if (text) await navigator.clipboard.writeText(text);
+        toast({ body: `已复制 ${data.results.length} 条${skippedNote}` });
+      } else {
+        toast({ body: `已开放 ${data.results.length} 个链接${skippedNote}` });
+      }
+      setSelected(new Set());
+      await queryClient.invalidateQueries({ queryKey: ['addresses'] });
+    } catch (error) {
+      toast({ body: error instanceof Error ? error.message : '批量操作失败', type: 'error' });
+    }
+  }
+
   /** 撤销指定邮箱的开放访问。 */
   async function revokeAccess() {
     if (!revokeTarget) return;
@@ -169,13 +205,16 @@ const AddressesPage = () => {
         <HStack gap={1} wrap="wrap">
           <Button label="邮件" size="sm" onClick={() => setMailAddress(row)} />
           <Button
-            label={row.publicAccessEnabled ? '重置链接' : '开放链接'}
+            label={row.publicAccessEnabled ? '查看链接' : '开放链接'}
             size="sm"
             variant="primary"
-            onClick={() => publicMutation.mutate(row.id)}
+            onClick={() => (row.publicAccessEnabled ? getLinks(row.id) : publicMutation.mutate(row.id))}
           />
           {row.publicAccessEnabled ? (
-            <Button label="撤销" size="sm" variant="destructive" onClick={() => setRevokeTarget(row)} />
+            <>
+              <Button label="重置链接" size="sm" onClick={() => publicMutation.mutate(row.id)} />
+              <Button label="撤销" size="sm" variant="destructive" onClick={() => setRevokeTarget(row)} />
+            </>
           ) : null}
         </HStack>
       )
@@ -230,6 +269,8 @@ const AddressesPage = () => {
             <Button label="批量已使用" onClick={() => batchState('used')} />
             <Button label="批量未使用" onClick={() => batchState('unused')} />
             <Button label="批量垃圾箱" variant="destructive" onClick={() => batchState('trash')} />
+            <Button label="批量开放链接" variant="primary" onClick={() => batchPublicAccess(false)} />
+            <Button label="批量复制信息" onClick={() => batchPublicAccess(true)} />
             <Text color="secondary">已选择 {selected.size} 项</Text>
           </HStack>
         </VStack>

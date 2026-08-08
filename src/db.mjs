@@ -123,6 +123,7 @@ export function createDatabase(databasePath) {
     CREATE TABLE IF NOT EXISTS address_public_access (
       address_id TEXT PRIMARY KEY,
       token_hash TEXT NOT NULL,
+      token_encrypted TEXT,
       created_at TEXT NOT NULL,
       rotated_at TEXT,
       last_access_at TEXT,
@@ -191,5 +192,9 @@ export function createDatabase(databasePath) {
   }
   db.exec("CREATE INDEX IF NOT EXISTS idx_messages_account ON inbox_messages(account_id, received_at DESC)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_inbox_configs_due ON account_inbox_configs(next_sync_at)");
+  const accessColumns = db.pragma("table_info(address_public_access)");
+  if (!accessColumns.some(column => column.name === "token_encrypted")) {
+    db.exec("ALTER TABLE address_public_access ADD COLUMN token_encrypted TEXT");
+  }
   return db;
 }

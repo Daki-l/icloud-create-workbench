@@ -418,11 +418,17 @@ export function createRepositories(db) {
   }
 
   /** 创建或轮换邮箱公开访问密钥哈希。 */
-  function savePublicAccess(addressId, tokenHash) {
+  function savePublicAccess(addressId, tokenHash, tokenEncrypted) {
     const now = new Date().toISOString();
-    db.prepare(`INSERT INTO address_public_access (address_id, token_hash, created_at)
-      VALUES (?, ?, ?) ON CONFLICT(address_id) DO UPDATE SET token_hash = excluded.token_hash,
-      rotated_at = excluded.created_at, last_access_at = NULL`).run(addressId, tokenHash, now);
+    db.prepare(`INSERT INTO address_public_access (address_id, token_hash, token_encrypted, created_at)
+      VALUES (?, ?, ?, ?) ON CONFLICT(address_id) DO UPDATE SET token_hash = excluded.token_hash,
+      token_encrypted = excluded.token_encrypted,
+      rotated_at = excluded.created_at, last_access_at = NULL`).run(addressId, tokenHash, tokenEncrypted, now);
+  }
+
+  /** 读取邮箱公开访问的内部记录（含加密密钥），不存在返回 null。 */
+  function getPublicAccessInternal(addressId) {
+    return db.prepare("SELECT token_encrypted, created_at FROM address_public_access WHERE address_id = ?").get(addressId) || null;
   }
 
   /** 撤销邮箱公开访问。 */
@@ -545,7 +551,7 @@ export function createRepositories(db) {
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
-    getAddress, pageAddressMessages, getMessage, savePublicAccess, revokePublicAccess, getLatestPublicMail,
+    getAddress, pageAddressMessages, getMessage, savePublicAccess, getPublicAccessInternal, revokePublicAccess, getLatestPublicMail,
     getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,
     saveInboxConfig, insertMessage, listMessages, pageMessages, getSetting, setSetting
   };
