@@ -29,7 +29,7 @@ const PublicMailPage = () => {
     queryKey: ['public-mail', email, token],
     queryFn: () =>
       apiFetch<{ email: string; message: MailMessage | null }>(
-        `/openapi/mail/${encodeURIComponent(email)}/${token}/latest`
+        `/openapi/mail/${encodeURIComponent(email)}/${token}/latest?format=json`
       ),
     refetchInterval: 15_000,
     retry: false
