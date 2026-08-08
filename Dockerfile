@@ -1,14 +1,16 @@
+# syntax=docker/dockerfile:1.4
 FROM node:24-bookworm-slim AS node-deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev
 
 FROM node:24-bookworm-slim AS frontend-builder
 WORKDIR /frontend
 RUN corepack enable && corepack prepare pnpm@10.4.1 --activate
 COPY frontend ./
-RUN pnpm install --frozen-lockfile --filter skyroc-admin... \
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile --filter skyroc-admin... \
     && pnpm --filter skyroc-admin build \
     && ! grep -R "%VITE_" apps/admin/dist/index.html
 
