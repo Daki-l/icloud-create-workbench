@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: .
-    image: icloud-create-workbench:local
+    image: ghcr.io/daki-l/icloud-create-workbench:latest
     env_file:
       - .env
     environment:
