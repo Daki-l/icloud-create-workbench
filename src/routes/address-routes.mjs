@@ -17,6 +17,7 @@ export function createAddressRouter(repositories, publicMailService) {
     const result = repositories.pageAddresses({
       accountId: req.query.accountId,
       state: req.query.state,
+      publicAccess: req.query.publicAccess,
       search: String(req.query.search || "").slice(0, 100)
     }, page, pageSize);
     res.json({ addresses: result.rows, pagination: { page, pageSize, total: result.total, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) } });
@@ -27,6 +28,7 @@ export function createAddressRouter(repositories, publicMailService) {
     const rows = repositories.listAddresses({
       accountId: req.query.accountId,
       state: req.query.state,
+      publicAccess: req.query.publicAccess,
       search: String(req.query.search || "").slice(0, 100)
     });
     const csv = ["邮箱,标签,状态,来源,Apple ID,创建时间", ...rows.map(row => [
@@ -42,6 +44,7 @@ export function createAddressRouter(repositories, publicMailService) {
     const rows = repositories.listAddresses({
       accountId: req.query.accountId,
       state: req.query.state,
+      publicAccess: req.query.publicAccess,
       search: String(req.query.search || "").slice(0, 100)
     });
     const content = rows.map(row => `${row.email}----${row.label}`).join("\r\n");

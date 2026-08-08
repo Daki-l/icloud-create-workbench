@@ -31,10 +31,11 @@ interface AddressFilters {
   accountId: string;
   search: string;
   state: string;
+  publicAccess: string;
 }
 type AddressRow = Address & Record<string, unknown>;
 
-const EMPTY_FILTERS: AddressFilters = { accountId: '', search: '', state: '' };
+const EMPTY_FILTERS: AddressFilters = { accountId: '', search: '', state: '', publicAccess: '' };
 
 /** 渲染邮箱库存、批量状态、邮件与开放链接操作。 */
 const AddressesPage = () => {
@@ -253,6 +254,18 @@ const AddressesPage = () => {
               placeholder="全部状态"
               value={draftFilters.state}
               onChange={state => setDraftFilters(current => ({ ...current, state: state || '' }))}
+            />
+            <Selector
+              hasClear
+              isLabelHidden
+              label="开放链接筛选"
+              options={[
+                { label: '已开放链接', value: 'enabled' },
+                { label: '未开放链接', value: 'disabled' }
+              ]}
+              placeholder="全部链接"
+              value={draftFilters.publicAccess}
+              onChange={publicAccess => setDraftFilters(current => ({ ...current, publicAccess: publicAccess || '' }))}
             />
             <TextInput
               hasClear

@@ -18,6 +18,13 @@ function addressStateFilter(state) {
   return null;
 }
 
+/** 将开放链接筛选条件转换为 SQL 片段。 */
+function addressAccessFilter(publicAccess) {
+  if (publicAccess === "enabled") return "EXISTS(SELECT 1 FROM address_public_access p WHERE p.address_id = h.id)";
+  if (publicAccess === "disabled") return "NOT EXISTS(SELECT 1 FROM address_public_access p WHERE p.address_id = h.id)";
+  return null;
+}
+
 /** 创建业务数据仓库。 */
 export function createRepositories(db) {
   /** 将活动任务唯一约束冲突转换为统一的业务错误。 */
@@ -356,6 +363,8 @@ export function createRepositories(db) {
     if (filters.accountId) { where.push("h.account_id = ?"); values.push(filters.accountId); }
     const stateClause = addressStateFilter(filters.state);
     if (stateClause) where.push(stateClause);
+    const accessClause = addressAccessFilter(filters.publicAccess);
+    if (accessClause) where.push(accessClause);
     if (filters.search) { where.push("(h.email LIKE ? OR h.apple_label LIKE ?)"); values.push(`%${filters.search}%`, `%${filters.search}%`); }
     return db.prepare(`SELECT h.id, h.account_id AS accountId, h.email, h.apple_label AS label,
       ${DERIVED_ADDRESS_STATE} AS state, h.source, h.created_at AS createdAt, a.apple_id AS appleId
@@ -370,6 +379,8 @@ export function createRepositories(db) {
     if (filters.accountId) { where.push("h.account_id = ?"); values.push(filters.accountId); }
     const stateClause = addressStateFilter(filters.state);
     if (stateClause) where.push(stateClause);
+    const accessClause = addressAccessFilter(filters.publicAccess);
+    if (accessClause) where.push(accessClause);
     if (filters.search) { where.push("(h.email LIKE ? OR h.apple_label LIKE ?)"); values.push(`%${filters.search}%`, `%${filters.search}%`); }
     const clause = where.join(" AND ");
     const total = Number(db.prepare(`SELECT COUNT(*) AS count FROM hidden_addresses h WHERE ${clause}`).get(...values).count || 0);
