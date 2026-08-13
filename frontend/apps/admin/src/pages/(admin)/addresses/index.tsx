@@ -134,8 +134,8 @@ const AddressesPage = () => {
     }
   }
 
-  /** 批量为选中邮箱确保公开访问链接，copy 为真时按 address----apiurl 复制到剪贴板。 */
-  async function batchPublicAccess(copy: boolean) {
+  /** 批量为选中邮箱确保公开访问链接，copyKey 指定要复制的链接字段，为空时仅开放不复制。 */
+  async function batchPublicAccess(copyKey?: 'apiUrl' | 'listApiUrl' | 'viewerUrl') {
     if (!selected.size) {
       toast({ body: '请先选择邮箱', type: 'error' });
       return;
@@ -146,10 +146,11 @@ const AddressesPage = () => {
         { body: JSON.stringify({ ids: [...selected] }), method: 'POST' }
       );
       const skippedNote = data.skipped.length ? `，其中 ${data.skipped.length} 个为旧版需手动重置` : '';
-      if (copy) {
-        const text = data.results.map(item => `${item.email}----${item.apiUrl}`).join('\n');
+      if (copyKey) {
+        const text = data.results.map(item => `${item.email}----${item[copyKey]}`).join('\n');
         if (text) await navigator.clipboard.writeText(text);
-        toast({ body: `已复制 ${data.results.length} 条${skippedNote}` });
+        const label = copyKey === 'apiUrl' ? 'JSON 最新邮件' : copyKey === 'listApiUrl' ? 'JSON 列表' : '查看页';
+        toast({ body: `已复制 ${data.results.length} 条${label}链接${skippedNote}` });
       } else {
         toast({ body: `已开放 ${data.results.length} 个链接${skippedNote}` });
       }
@@ -283,8 +284,10 @@ const AddressesPage = () => {
           </HStack>
           <HStack gap={2} wrap="wrap">
             <Button label="批量垃圾箱" variant="destructive" onClick={() => batchState('trash')} />
-            <Button label="批量开放链接" variant="primary" onClick={() => batchPublicAccess(false)} />
-            <Button label="批量复制信息" onClick={() => batchPublicAccess(true)} />
+            <Button label="批量开放链接" variant="primary" onClick={() => batchPublicAccess()} />
+            <Button label="批量复制 JSON 列表" onClick={() => batchPublicAccess('listApiUrl')} />
+            <Button label="批量复制 JSON 最新邮件" onClick={() => batchPublicAccess('apiUrl')} />
+            <Button label="批量复制查看页" onClick={() => batchPublicAccess('viewerUrl')} />
             <Text color="secondary">已选择 {selected.size} 项</Text>
           </HStack>
         </VStack>
