@@ -8,6 +8,7 @@ import { VStack } from '@astryxdesign/core/Stack';
 import { Text } from '@astryxdesign/core/Text';
 import { useToast } from '@astryxdesign/core/Toast';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
+import { useCopy } from '@skyroc/hooks/web';
 
 import PageHeader from '@/components/PageHeader';
 
@@ -25,11 +26,12 @@ const steps = [
 const GuidePage = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { copy: copyToClipboard } = useCopy();
 
-  /** 复制指南中的地址或筛选词。 */
+  /** 复制指南中的地址或筛选词，非安全上下文（HTTP + 非 localhost）回退到 execCommand。 */
   async function copy(value: string) {
-    await navigator.clipboard.writeText(value);
-    toast({ body: '已复制' });
+    const ok = await copyToClipboard(value);
+    toast({ body: ok ? '已复制' : '复制失败，请手动选择复制', type: ok ? 'info' : 'error' });
   }
 
   return (

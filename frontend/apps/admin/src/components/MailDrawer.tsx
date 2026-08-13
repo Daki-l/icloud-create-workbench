@@ -1,3 +1,4 @@
+import { useCopy } from '@skyroc/hooks/web';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
@@ -34,6 +35,7 @@ interface MailDrawerProps {
 const MailDrawer = (props: MailDrawerProps) => {
   const { addressId, email, onClose, open } = props;
   const toast = useToast();
+  const { copy: copyToClipboard } = useCopy();
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState('');
   const [viewMode, setViewMode] = useState<'html' | 'text'>('html');
@@ -65,10 +67,10 @@ const MailDrawer = (props: MailDrawerProps) => {
     setViewMode('html');
   }
 
-  /** 复制邮件验证码。 */
+  /** 复制邮件验证码，非安全上下文回退到 execCommand。 */
   async function copyCode(code: string) {
-    await navigator.clipboard.writeText(code);
-    toast({ body: '验证码已复制' });
+    const ok = await copyToClipboard(code);
+    toast({ body: ok ? '验证码已复制' : '复制失败，请手动选择复制', type: ok ? 'info' : 'error' });
   }
 
   const message = detailQuery.data?.message;

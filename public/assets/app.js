@@ -17,6 +17,19 @@ function toast(message, error = false) {
   setTimeout(() => elements.toast.classList.remove("show"), 3200);
 }
 
+/** 复制文本到剪贴板，非安全上下文（HTTP + 非 localhost）回退到 execCommand，返回是否成功。 */
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+  } catch (_) { /* 落到 execCommand 回退 */ }
+  const textArea = document.createElement("textarea");
+  textArea.value = text; textArea.style.position = "fixed"; textArea.style.left = "-9999px"; textArea.style.top = "0"; textArea.style.opacity = "0";
+  document.body.appendChild(textArea); textArea.focus(); textArea.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (_) { ok = false; } finally { document.body.removeChild(textArea); }
+  return ok;
+}
+
 /** 设置按钮的忙碌状态和提示文字。 */
 function setBusy(formOrButton, busy, text = "处理中...") {
   const button = formOrButton?.tagName === "FORM" ? formOrButton.querySelector("button[type=submit]") : formOrButton;
@@ -208,8 +221,8 @@ async function syncInbox() {
 async function handleClick(event) {
   const route = event.target.closest("[data-route], [data-go]"); if (route) { event.preventDefault(); return navigate(route.dataset.route || route.dataset.go); }
   const detail = event.target.closest("[data-action=detail], [data-account-open]"); if (detail) return openAccount(detail.dataset.accountOpen || detail.closest("[data-account-id]").dataset.accountId);
-  const copy = event.target.closest("[data-email], [data-code]"); if (copy) { await navigator.clipboard.writeText(copy.dataset.email || copy.dataset.code); return toast("已复制"); }
-  const copyValue = event.target.closest("[data-copy-value]"); if (copyValue) { await navigator.clipboard.writeText(copyValue.dataset.copyValue); return toast("已复制"); }
+  const copy = event.target.closest("[data-email], [data-code]"); if (copy) { const ok = await copyText(copy.dataset.email || copy.dataset.code); return toast(ok ? "已复制" : "复制失败，请手动复制", !ok); }
+  const copyValue = event.target.closest("[data-copy-value]"); if (copyValue) { const ok = await copyText(copyValue.dataset.copyValue); return toast(ok ? "已复制" : "复制失败，请手动复制", !ok); }
   const stop = event.target.closest("[data-campaign-stop]"); if (stop) return changeCampaign(stop.dataset.campaignStop, "stop");
   const resume = event.target.closest("[data-campaign-resume]"); if (resume) return changeCampaign(resume.dataset.campaignResume, "resume");
   const pager = event.target.closest("[data-page-kind]"); if (pager && !pager.disabled) {

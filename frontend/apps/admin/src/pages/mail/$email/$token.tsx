@@ -1,3 +1,4 @@
+import { useCopy } from '@skyroc/hooks/web';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -35,6 +36,7 @@ interface PublicMailList {
 const PublicMailPage = () => {
   const { email, token } = routeApi.useParams();
   const toast = useToast();
+  const { copy: copyToClipboard } = useCopy();
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState('');
   const [viewMode, setViewMode] = useState<'html' | 'text'>('html');
@@ -54,10 +56,10 @@ const PublicMailPage = () => {
     setViewMode('html');
   }
 
-  /** 复制文本到剪贴板并提示。 */
+  /** 复制文本到剪贴板并提示，非安全上下文回退到 execCommand。 */
   async function copy(value: string, message: string) {
-    await navigator.clipboard.writeText(value);
-    toast({ body: message });
+    const ok = await copyToClipboard(value);
+    toast({ body: ok ? message : '复制失败，请手动选择复制', type: ok ? 'info' : 'error' });
   }
 
   if (listQuery.isLoading)

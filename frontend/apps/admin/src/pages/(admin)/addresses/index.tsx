@@ -1,3 +1,4 @@
+import { useCopy } from '@skyroc/hooks/web';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -42,6 +43,7 @@ const EMPTY_FILTERS: AddressFilters = { accountId: '', search: '', state: '', pu
 const AddressesPage = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
+  const { copy: copyToClipboard } = useCopy();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -148,9 +150,9 @@ const AddressesPage = () => {
       const skippedNote = data.skipped.length ? `，其中 ${data.skipped.length} 个为旧版需手动重置` : '';
       if (copyKey) {
         const text = data.results.map(item => `${item.email}----${item[copyKey]}`).join('\n');
-        if (text) await navigator.clipboard.writeText(text);
+        const ok = !text || await copyToClipboard(text);
         const label = copyKey === 'apiUrl' ? 'JSON 最新邮件' : copyKey === 'listApiUrl' ? 'JSON 列表' : '查看页';
-        toast({ body: `已复制 ${data.results.length} 条${label}链接${skippedNote}` });
+        toast({ body: ok ? `已复制 ${data.results.length} 条${label}链接${skippedNote}` : '复制失败，请手动选择复制', type: ok ? 'info' : 'error' });
       } else {
         toast({ body: `已开放 ${data.results.length} 个链接${skippedNote}` });
       }
@@ -174,11 +176,11 @@ const AddressesPage = () => {
     }
   }
 
-  /** 复制开放邮件地址或密钥。 */
+  /** 复制开放邮件地址或密钥，非安全上下文回退到 execCommand。 */
   async function copyPublicValue(value: string | undefined, label: string) {
     if (!value) return;
-    await navigator.clipboard.writeText(value);
-    toast({ body: `${label}已复制` });
+    const ok = await copyToClipboard(value);
+    toast({ body: ok ? `${label}已复制` : '复制失败，请手动选择复制', type: ok ? 'info' : 'error' });
   }
 
   const columns: TableColumn<AddressRow>[] = [
