@@ -24,6 +24,7 @@ import type { Account, Address, Pagination as PageInfo } from '@/types/workbench
 
 interface PublicLinks {
   apiUrl: string;
+  listApiUrl: string;
   token: string;
   viewerUrl: string;
 }
@@ -140,7 +141,7 @@ const AddressesPage = () => {
       return;
     }
     try {
-      const data = await apiFetch<{ results: { id: string; email: string; apiUrl: string; viewerUrl: string }[]; skipped: { id: string; email: string }[] }>(
+      const data = await apiFetch<{ results: { id: string; email: string; apiUrl: string; listApiUrl: string; viewerUrl: string }[]; skipped: { id: string; email: string }[] }>(
         '/api/addresses/batch-public-access',
         { body: JSON.stringify({ ids: [...selected] }), method: 'POST' }
       );
@@ -354,6 +355,13 @@ const AddressesPage = () => {
               <Button label="复制" size="sm" onClick={() => copyPublicValue(links?.apiUrl, 'JSON 接口')} />
             </HStack>
             <Text className="workbench-code">{links?.apiUrl}</Text>
+          </VStack>
+          <VStack gap={1}>
+            <HStack hAlign="between" vAlign="center">
+              <Text weight="bold">JSON 列表接口</Text>
+              <Button label="复制" size="sm" onClick={() => copyPublicValue(links?.listApiUrl, 'JSON 列表接口')} />
+            </HStack>
+            <Text className="workbench-code">{links?.listApiUrl}</Text>
           </VStack>
           <VStack gap={1}>
             <HStack hAlign="between" vAlign="center">

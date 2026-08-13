@@ -476,6 +476,22 @@ export function createRepositories(db) {
     return { email: access.email, message };
   }
 
+  /** 使用邮箱和密钥哈希分页读取该邮箱全部邮件（含正文）。 */
+  function pagePublicMail(email, tokenHash, page = 1, pageSize = 20) {
+    const access = db.prepare(`SELECT h.id AS addressId, h.email FROM hidden_addresses h
+      JOIN address_public_access p ON p.address_id = h.id
+      WHERE lower(h.email) = lower(?) AND p.token_hash = ?`).get(email, tokenHash);
+    if (!access) return null;
+    const total = Number(db.prepare("SELECT COUNT(*) AS count FROM inbox_messages WHERE address_id = ?")
+      .get(access.addressId).count || 0);
+    const messages = db.prepare(`SELECT id, subject, sender, code, preview, body_text AS bodyText, body_html AS bodyHtml,
+      received_at AS receivedAt FROM inbox_messages WHERE address_id = ? ORDER BY received_at DESC LIMIT ? OFFSET ?`)
+      .all(access.addressId, pageSize, (page - 1) * pageSize);
+    db.prepare("UPDATE address_public_access SET last_access_at = ? WHERE address_id = ?")
+      .run(new Date().toISOString(), access.addressId);
+    return { email: access.email, messages, total, page, pageSize };
+  }
+
   /** 读取全局 IMAP 配置内部数据。 */
   function getInboxConfigInternal(accountId) {
     return db.prepare("SELECT * FROM account_inbox_configs WHERE account_id = ?").get(accountId);
@@ -577,7 +593,7 @@ export function createRepositories(db) {
     countAddresses, createCampaign, findOpenCampaign, getCampaignInternal, listCampaigns, listDueCampaigns,
     stopCampaign, resumeCampaign, updateCampaignLabelPrefix, deleteCampaign, completeCampaign, recordCampaignRun,
     upsertAddresses, listAddresses, pageAddresses, updateAddressState, updateAddressStates,
-    getAddress, pageAddressMessages, getMessage, savePublicAccess, getPublicAccessInternal, revokePublicAccess, getLatestPublicMail,
+    getAddress, pageAddressMessages, getMessage, savePublicAccess, getPublicAccessInternal, revokePublicAccess, getLatestPublicMail, pagePublicMail,
     getInboxConfigInternal, listInboxConfigs, updateInboxSyncState, resetInboxSyncState, completeInboxHtmlBackfill,
     saveInboxConfig, insertMessage, listMessages, pageMessages, getSetting, setSetting
   };

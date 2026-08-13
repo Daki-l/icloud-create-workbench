@@ -86,5 +86,18 @@ export function createPublicMailRouter(config, publicMailService) {
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     res.send(renderMailHtml(result));
   });
+
+  /** 分页返回该隐私邮箱的全部邮件 JSON（列表带正文），pageSize 硬上限 20。 */
+  router.get("/mail/:email/:token/list", limiter, (req, res) => {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.min(20, Math.max(1, Number(req.query.pageSize || 20)));
+    const result = publicMailService.getList(req.params.email, req.params.token, page, pageSize);
+    if (!result) return res.status(404).json({ error: "邮件地址或访问密钥无效" });
+    res.json({
+      email: result.email,
+      messages: result.messages,
+      pagination: { page, pageSize, total: result.total, totalPages: Math.max(1, Math.ceil(result.total / pageSize)) }
+    });
+  });
   return router;
 }

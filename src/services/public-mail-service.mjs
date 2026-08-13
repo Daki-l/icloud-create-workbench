@@ -18,6 +18,7 @@ export function createPublicMailService({ config, repositories }) {
     return {
       token,
       apiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/latest`,
+      listApiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/list`,
       viewerUrl: `${config.appOrigin}/mail/${encodedEmail}/${token}`
     };
   }
@@ -33,6 +34,7 @@ export function createPublicMailService({ config, repositories }) {
     return {
       token,
       apiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/latest`,
+      listApiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/list`,
       viewerUrl: `${config.appOrigin}/mail/${encodedEmail}/${token}`,
       createdAt: row.created_at
     };
@@ -53,11 +55,12 @@ export function createPublicMailService({ config, repositories }) {
           id,
           email: address.email,
           apiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/latest`,
+          listApiUrl: `${config.appOrigin}/openapi/mail/${encodedEmail}/${token}/list`,
           viewerUrl: `${config.appOrigin}/mail/${encodedEmail}/${token}`
         });
       } else if (!row) {
         const created = createAccess(id);
-        results.push({ id, email: address.email, apiUrl: created.apiUrl, viewerUrl: created.viewerUrl });
+        results.push({ id, email: address.email, apiUrl: created.apiUrl, listApiUrl: created.listApiUrl, viewerUrl: created.viewerUrl });
       } else {
         skipped.push({ id, email: address.email });
       }
@@ -78,5 +81,11 @@ export function createPublicMailService({ config, repositories }) {
     return repositories.getLatestPublicMail(email, hashToken(token));
   }
 
-  return { createAccess, getAccess, batchEnsureAccess, revokeAccess, getLatest };
+  /** 使用邮箱和公开密钥分页读取全部邮件（含正文）。 */
+  function getList(email, token, page, pageSize) {
+    if (!email || !token || String(token).length < 32) return null;
+    return repositories.pagePublicMail(email, hashToken(token), page, pageSize);
+  }
+
+  return { createAccess, getAccess, batchEnsureAccess, revokeAccess, getLatest, getList };
 }

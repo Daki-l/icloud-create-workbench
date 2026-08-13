@@ -58,7 +58,17 @@ export function createApp({ config, repositories, icloudService, inboxService, c
     res.setHeader("Pragma", "no-cache");
     res.sendFile(join(frontendDir, "index.html"));
   };
-  app.get(["/login", "/login/", "/login.html", "/login-out"], sendFrontend);
+  /** 返回登录页：legacy 模式下用独立的 login.html，React 构建模式回退到 SPA 入口。 */
+  const sendLoginPage = (req, res) => {
+    const legacyLogin = join(frontendDir, "login.html");
+    if (existsSync(legacyLogin)) {
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0, no-transform");
+      res.setHeader("Pragma", "no-cache");
+      return res.sendFile(legacyLogin);
+    }
+    sendFrontend(req, res);
+  };
+  app.get(["/login", "/login/", "/login.html", "/login-out"], sendLoginPage);
   app.get("/mail/:email/:token", (req, res) => {
     res.setHeader("Cache-Control", "no-store, max-age=0");
     res.setHeader("Referrer-Policy", "no-referrer");

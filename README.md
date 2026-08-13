@@ -20,14 +20,15 @@
 
 ## 开放邮件接口
 
-在“邮箱库存”中点击“开放链接”，系统会生成一组仅展示一次的密钥和两个地址：
+在“邮箱库存”中点击“开放链接”，系统会生成一组仅展示一次的密钥和三个地址：
 
 ```text
-GET /openapi/mail/:email/:token/latest
-GET /mail/:email/:token
+GET /openapi/mail/:email/:token/latest   # 最新一封（浏览器打开为 HTML，?format=json 返回 JSON）
+GET /openapi/mail/:email/:token/list      # 分页返回全部邮件 JSON（列表带正文）
+GET /mail/:email/:token                   # 只读网页，分页查看全部邮件
 ```
 
-JSON 接口返回该隐私邮箱在本地数据库中的最新邮件；暂无邮件时返回 `message: null`。重置或撤销后，旧密钥立即失效。开放请求不会临时连接 IMAP，后台同步器默认每 30 秒更新本地邮件。
+`latest` 返回该隐私邮箱在本地数据库中的最新邮件；暂无邮件时返回 `message: null`。`list` 分页返回全部邮件，支持 `page`、`pageSize` 查询参数，`pageSize` 硬上限 20；返回结构与 `latest` 一致地包含正文。只读网页 `/mail/:email/:token` 改为列表+详情视图，支持翻页与每 30 秒自动刷新。重置或撤销后，旧密钥立即失效。开放请求不会临时连接 IMAP，后台同步器默认每 30 秒更新本地邮件。
 
 ## 获取 iCloud CK
 
@@ -96,6 +97,49 @@ npm run init-env
 ```
 
 `start.ps1` 会自动安装根目录 npm 依赖、Skyroc 的 pnpm 依赖、构建前端，并把数据库路径切换为项目内的 `data/workbench.db`。
+
+## 通过 SSH 隧道访问远程数据
+
+本地数据库是独立的 SQLite 文件，默认不与服务器互通。想在本地浏览器里操作远程实时数据，用 SSH 端口转发把远程 4173 映射到本地 4173 即可，无需改代码、无需拷数据库。
+
+```bash
+ssh -N -L 4173:localhost:4173 -i "C:/Users/Theadore/.ssh/ssh-cdk-140.238.34.121.key" opc@140.238.34.121
+```
+
+- `-N` 只做端口转发，不进远程 shell，保持窗口开着即生效，`Ctrl+C` 或关窗口断开。
+- 连通后本地浏览器打开 `http://localhost:4173`，走的就是远程服务、读写远程那份 `workbench.db`。
+- 用户名按镜像而定：Oracle Linux 默认 `opc`，Ubuntu 镜像换 `ubuntu`。
+
+### Windows 首次报 "UNPROTECTED PRIVATE KEY FILE"
+
+Windows OpenSSH 对私钥权限检查很严，提示 `bad permissions` 时收紧该 key 权限（PowerShell 执行）：
+
+```powershell
+icacls "C:\Users\Theadore\.ssh\ssh-cdk-140.238.34.121.key" /inheritance:r
+icacls "C:\Users\Theadore\.ssh\ssh-cdk-140.238.34.121.key" /grant:r "$($env:USERNAME):(R)"
+```
+
+第一条去掉继承的所有权限，第二条替换式地只给当前用户读权限。跑完再重试 ssh 命令。
+
+### 可选：写进 ssh config，以后一条命令开启
+
+编辑 `C:\Users\Theadore\.ssh\config`（没有则新建）：
+
+```sshconfig
+Host workbench
+  HostName 140.238.34.121
+  User opc
+  IdentityFile C:/Users/Theadore/.ssh/ssh-cdk-140.238.34.121.key
+  LocalForward 4173 localhost:4173
+```
+
+之后只需：
+
+```bash
+ssh -N workbench
+```
+
+> 注意：SQLite 是单机文件数据库，不要用 SSHFS/SMB 网络挂载远程 `.db` 到本地再用本地进程读写，WAL 锁在跨机文件系统上不可靠，会损坏数据库。要本地实时操作远程数据，就用上面的 SSH 隧道。
 
 ## HTTPS 升级
 
