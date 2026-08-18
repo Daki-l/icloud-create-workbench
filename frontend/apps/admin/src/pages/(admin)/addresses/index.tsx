@@ -100,11 +100,13 @@ const AddressesPage = () => {
     }
   });
 
-  /** 应用当前筛选条件并返回第一页。 */
+  /** 应用当前筛选条件并返回第一页，强制重新拉取以反映最新邮件。 */
   function applyFilters() {
     setPage(1);
     setSelected(new Set());
     setFilters(draftFilters);
+    // draftFilters 未变时 queryKey 不变、React Query 会命中缓存，故主动失效强制走网络。
+    void queryClient.invalidateQueries({ queryKey: ['addresses'] });
   }
 
   /** 导出当前输入的筛选结果。 */
