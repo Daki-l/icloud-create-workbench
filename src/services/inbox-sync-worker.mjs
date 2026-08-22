@@ -3,6 +3,12 @@ export function createInboxSyncWorker({ config, repositories, inboxService }) {
   let timer = null;
   let ticking = false;
 
+  /** 读取生效同步间隔：DB 覆盖优先（限定 10-3600），回退到环境变量配置。 */
+  function resolveInterval() {
+    const override = Number(repositories.getSetting("inboxSyncIntervalSeconds"));
+    return Number.isInteger(override) && override >= 10 && override <= 3600 ? override : config.inboxSyncIntervalSeconds;
+  }
+
   /** 以限定并发执行当前到期的 IMAP 配置。 */
   async function tick() {
     if (ticking) return;
@@ -22,12 +28,23 @@ export function createInboxSyncWorker({ config, repositories, inboxService }) {
     }
   }
 
+  /** 以当前生效间隔重新武装定时器。 */
+  function arm() {
+    if (timer) clearInterval(timer);
+    timer = setInterval(() => void tick(), resolveInterval() * 1000);
+    timer.unref();
+  }
+
   /** 启动定时同步并立即检查一次。 */
   function start() {
     if (timer) return;
-    timer = setInterval(() => void tick(), config.inboxSyncIntervalSeconds * 1000);
-    timer.unref();
+    arm();
     void tick();
+  }
+
+  /** 运行时更新同步间隔并立即生效，无需重启服务。 */
+  function updateInterval() {
+    arm();
   }
 
   /** 停止后台同步定时器。 */
@@ -36,5 +53,5 @@ export function createInboxSyncWorker({ config, repositories, inboxService }) {
     timer = null;
   }
 
-  return { start, close, tick };
+  return { start, close, tick, updateInterval, resolveInterval };
 }

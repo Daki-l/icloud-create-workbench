@@ -20,13 +20,16 @@ function createTestApp() {
     pageAllJobs: () => ({ rows: [], total: 0 }),
     listAddresses: () => [],
     listMessages: () => [],
-    getInboxConfigInternal: () => null
+    getInboxConfigInternal: () => null,
+    getSetting: () => null,
+    setSetting: () => {}
   };
   const icloudService = {};
   const inboxService = { getConfig: () => ({ configured: false }) };
   const campaignService = { listCampaigns: () => [] };
   const publicMailService = { getLatest: () => null };
-  return createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService });
+  const inboxSyncWorker = { resolveInterval: () => 30, updateInterval: () => {} };
+  return createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService, inboxSyncWorker });
 }
 
 test("健康检查无需登录且不返回配置", async () => {
@@ -46,11 +49,20 @@ test("未登录时受保护 API 返回 401", async () => {
 
 test("管理页面要求登录但登录页和公开邮件页可匿名访问", async () => {
   const app = createTestApp();
-  await request(app).get("/index.html").expect(302).expect("Location", "/login");
+  // 根路径不暴露登录入口，未登录返回静默 404。
+  await request(app).get("/index.html").expect(404);
   const loginPage = await request(app).get("/login").expect(200).expect("Content-Type", /html/);
   assert.match(loginPage.headers["cache-control"], /no-store/);
   assert.match(loginPage.headers["cache-control"], /no-transform/);
   await request(app).get("/mail/example%40icloud.com/public-token").expect(200).expect("Content-Type", /html/);
+});
+
+test("未登录访问根路径返回静默 404，不暴露登录页", async () => {
+  const app = createTestApp();
+  await request(app).get("/").expect(404);
+  await request(app).get("/index.html").expect(404);
+  // admin 路由仍强制登录，跳转到 /login。
+  await request(app).get("/home").expect(302).expect("Location", "/login");
 });
 
 test("可信来源登录后可以访问受保护 API", async () => {

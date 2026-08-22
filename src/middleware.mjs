@@ -1,12 +1,12 @@
 import { verifyAdminToken } from "./security.mjs";
 
 /** 从 Cookie 校验管理员会话。 */
-export function requireAdmin(config) {
+export function requireAdmin(config, repositories) {
   return (req, res, next) => {
     const token = req.cookies?.workbench_admin;
     if (!token) return res.status(401).json({ error: "请先登录" });
     try {
-      req.admin = verifyAdminToken(token, config);
+      req.admin = verifyAdminToken(token, config, repositories);
       next();
     } catch {
       res.clearCookie("workbench_admin", { path: "/" });

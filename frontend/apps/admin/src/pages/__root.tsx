@@ -1,6 +1,7 @@
 import { Outlet, createRootRouteWithContext, useLocation, useMatches } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 
+import { isPublicPath } from '@/utils/route';
 import ErrorPage from './error';
 import NotFound from './not-found';
 import GlobalLoading from './loading';
@@ -41,7 +42,9 @@ const Root = () => {
 export const Route = createRootRouteWithContext<Router.RouterContext>()({
   component: Root,
   notFoundComponent: NotFound,
-  beforeLoad: async ({ context }) => {
+  beforeLoad: async ({ context, location }) => {
+    // 公开页面（取件页、登录页）无需鉴权初始化，避免匿名访问触发 /api/auth/me 的 401。
+    if (isPublicPath(location.pathname)) return;
     if (!context.isAuthInitialized) {
       await context.initAuth();
     }

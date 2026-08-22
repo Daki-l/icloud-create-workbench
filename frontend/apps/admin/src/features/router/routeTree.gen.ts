@@ -18,6 +18,7 @@ import { Route as authLoginOutRouteImport } from './../../pages/(auth)/login-out
 import { Route as authLoginLayoutRouteImport } from './../../pages/(auth)/login/layout'
 import { Route as authLoginIndexRouteImport } from './../../pages/(auth)/login/index'
 import { Route as adminTasksIndexRouteImport } from './../../pages/(admin)/tasks/index'
+import { Route as adminSettingsIndexRouteImport } from './../../pages/(admin)/settings/index'
 import { Route as adminInboxIndexRouteImport } from './../../pages/(admin)/inbox/index'
 import { Route as adminHomeIndexRouteImport } from './../../pages/(admin)/home/index'
 import { Route as adminGuideIndexRouteImport } from './../../pages/(admin)/guide/index'
@@ -69,6 +70,11 @@ const adminTasksIndexRoute = adminTasksIndexRouteImport.update({
   path: '/tasks/',
   getParentRoute: () => adminLayoutRoute,
 } as any)
+const adminSettingsIndexRoute = adminSettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => adminLayoutRoute,
+} as any)
 const adminInboxIndexRoute = adminInboxIndexRouteImport.update({
   id: '/inbox/',
   path: '/inbox/',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/guide/': typeof adminGuideIndexRoute
   '/home/': typeof adminHomeIndexRoute
   '/inbox/': typeof adminInboxIndexRoute
+  '/settings/': typeof adminSettingsIndexRoute
   '/tasks/': typeof adminTasksIndexRoute
   '/login/': typeof authLoginIndexRoute
 }
@@ -128,6 +135,7 @@ export interface FileRoutesByTo {
   '/guide': typeof adminGuideIndexRoute
   '/home': typeof adminHomeIndexRoute
   '/inbox': typeof adminInboxIndexRoute
+  '/settings': typeof adminSettingsIndexRoute
   '/tasks': typeof adminTasksIndexRoute
   '/login': typeof authLoginIndexRoute
 }
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   '/(admin)/guide/': typeof adminGuideIndexRoute
   '/(admin)/home/': typeof adminHomeIndexRoute
   '/(admin)/inbox/': typeof adminInboxIndexRoute
+  '/(admin)/settings/': typeof adminSettingsIndexRoute
   '/(admin)/tasks/': typeof adminTasksIndexRoute
   '/(auth)/login/': typeof authLoginIndexRoute
 }
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/guide/'
     | '/home/'
     | '/inbox/'
+    | '/settings/'
     | '/tasks/'
     | '/login/'
   fileRoutesByTo: FileRoutesByTo
@@ -179,6 +189,7 @@ export interface FileRouteTypes {
     | '/guide'
     | '/home'
     | '/inbox'
+    | '/settings'
     | '/tasks'
     | '/login'
   id:
@@ -196,6 +207,7 @@ export interface FileRouteTypes {
     | '/(admin)/guide/'
     | '/(admin)/home/'
     | '/(admin)/inbox/'
+    | '/(admin)/settings/'
     | '/(admin)/tasks/'
     | '/(auth)/login/'
   fileRoutesById: FileRoutesById
@@ -276,6 +288,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof adminTasksIndexRouteImport
       parentRoute: typeof adminLayoutRoute
     }
+    '/(admin)/settings/': {
+      id: '/(admin)/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof adminSettingsIndexRouteImport
+      parentRoute: typeof adminLayoutRoute
+    }
     '/(admin)/inbox/': {
       id: '/(admin)/inbox/'
       path: '/inbox'
@@ -327,6 +346,7 @@ interface adminLayoutRouteChildren {
   adminGuideIndexRoute: typeof adminGuideIndexRoute
   adminHomeIndexRoute: typeof adminHomeIndexRoute
   adminInboxIndexRoute: typeof adminInboxIndexRoute
+  adminSettingsIndexRoute: typeof adminSettingsIndexRoute
   adminTasksIndexRoute: typeof adminTasksIndexRoute
 }
 
@@ -336,6 +356,7 @@ const adminLayoutRouteChildren: adminLayoutRouteChildren = {
   adminGuideIndexRoute: adminGuideIndexRoute,
   adminHomeIndexRoute: adminHomeIndexRoute,
   adminInboxIndexRoute: adminInboxIndexRoute,
+  adminSettingsIndexRoute: adminSettingsIndexRoute,
   adminTasksIndexRoute: adminTasksIndexRoute,
 }
 

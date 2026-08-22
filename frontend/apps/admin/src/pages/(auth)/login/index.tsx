@@ -9,7 +9,7 @@ import { useInitLogin } from '@/features/auth/use-login';
 
 /** 渲染管理员密码登录表单。 */
 const Login = () => {
-  const [userName, setUserName] = useState('admin');
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [validation, setValidation] = useState({ password: '', userName: '' });
   const { clearError, error, loading, login } = useInitLogin();

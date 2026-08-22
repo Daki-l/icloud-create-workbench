@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { rateLimit } from "express-rate-limit";
-import { checkAdminPassword, sessionCookieOptions, signAdminToken, verifyAdminToken } from "../security.mjs";
+import { checkAdminPassword, resolveAdminUsername, sessionCookieOptions, signAdminToken, verifyAdminToken } from "../security.mjs";
 
 /** 创建管理员鉴权路由。 */
 export function createAuthRouter({ config, repositories }) {
@@ -16,7 +16,8 @@ export function createAuthRouter({ config, repositories }) {
 
   /** 校验管理员凭据并设置 JWT Cookie。 */
   router.post("/login", loginLimiter, (req, res) => {
-    const usernameOk = String(req.body?.username || "") === config.adminUsername;
+    const adminUsername = resolveAdminUsername(config, repositories);
+    const usernameOk = String(req.body?.username || "") === adminUsername;
     const password = req.body?.password || "";
     const overrideHash = repositories.getSetting("adminPasswordHash");
     const passwordOk = checkAdminPassword(password, {
@@ -25,8 +26,8 @@ export function createAuthRouter({ config, repositories }) {
       overrideHash
     });
     if (!usernameOk || !passwordOk) return res.status(401).json({ error: "用户名或密码错误" });
-    res.cookie("workbench_admin", signAdminToken(config), sessionCookieOptions(config));
-    res.json({ username: config.adminUsername });
+    res.cookie("workbench_admin", signAdminToken(config, repositories), sessionCookieOptions(config));
+    res.json({ username: adminUsername });
   });
 
   /** 清除管理员会话。 */
@@ -38,8 +39,8 @@ export function createAuthRouter({ config, repositories }) {
   /** 返回当前管理员会话状态。 */
   router.get("/me", (req, res) => {
     try {
-      verifyAdminToken(req.cookies?.workbench_admin, config);
-      res.json({ username: config.adminUsername });
+      verifyAdminToken(req.cookies?.workbench_admin, config, repositories);
+      res.json({ username: resolveAdminUsername(config, repositories) });
     } catch {
       res.status(401).json({ error: "未登录" });
     }

@@ -9,7 +9,8 @@ export const Route = createFileRoute('/')({
       throw redirect({ to: context.getHomeRoute() });
     }
 
-    throw redirect({ to: '/login' });
+    // 未登录不暴露登录入口，跳转到 404 页（生产环境由服务端直接返回静默 404，不会进入此分支）。
+    throw redirect({ to: '/404' });
   },
   staticData: {
     title: 'SkyrocAdmin'

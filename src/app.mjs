@@ -16,7 +16,7 @@ import { requireAdmin, requireTrustedOrigin } from "./middleware.mjs";
 import { verifyAdminToken } from "./security.mjs";
 
 /** 创建配置完整的 Express 应用。 */
-export function createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService }) {
+export function createApp({ config, repositories, icloudService, inboxService, campaignService, publicMailService, inboxSyncWorker }) {
   const app = express();
   const skyrocDir = join(process.cwd(), "frontend", "apps", "admin", "dist");
   const legacyDir = join(process.cwd(), "public");
@@ -36,14 +36,14 @@ export function createApp({ config, repositories, icloudService, inboxService, c
   app.use("/openapi", createPublicMailRouter(config, publicMailService));
   app.use("/api/auth", createAuthRouter({ config, repositories }));
 
-  const requireApiAdmin = requireAdmin(config);
+  const requireApiAdmin = requireAdmin(config, repositories);
   app.use("/api/icloud-accounts", requireApiAdmin, createAccountRouter({ repositories, icloudService }));
   app.use("/api/addresses", requireApiAdmin, createAddressRouter(repositories, publicMailService));
   app.use("/api/messages", requireApiAdmin, createMessageRouter(repositories));
   app.use("/api/inbox", requireApiAdmin, createInboxRouter({ inboxService, repositories }));
   app.use("/api/generation-jobs", requireApiAdmin, createTaskRouter(repositories));
   app.use("/api/generation-campaigns", requireApiAdmin, createCampaignRouter(campaignService));
-  app.use("/api/settings", requireApiAdmin, createSettingsRouter({ config, repositories }));
+  app.use("/api/settings", requireApiAdmin, createSettingsRouter({ config, repositories, inboxSyncWorker }));
 
   for (const directory of ["assets", "css", "js"]) {
     app.use(`/${directory}`, express.static(join(frontendDir, directory), { maxAge: "1h" }));
@@ -75,10 +75,20 @@ export function createApp({ config, repositories, icloudService, inboxService, c
     sendFrontend(req, res);
   });
 
-  /** 在服务器侧校验管理页面会话并返回 React 入口。 */
-  app.get(["/", "/index.html", "/home", "/overview", "/accounts", "/tasks", "/addresses", "/addresses/:id", "/inbox", "/guide", "/settings"], (req, res) => {
+  /** 根路径不暴露登录入口：已登录返回 SPA（由前端跳转首页），未登录返回静默 404。 */
+  app.get(["/", "/index.html"], (req, res) => {
     try {
-      verifyAdminToken(req.cookies?.workbench_admin, config);
+      verifyAdminToken(req.cookies?.workbench_admin, config, repositories);
+      sendFrontend(req, res);
+    } catch {
+      res.status(404).type("text/html").send("<!doctype html><meta charset=\"utf-8\"><title>404 Not Found</title><h1>404</h1><p>Not Found</p>");
+    }
+  });
+
+  /** 在服务器侧校验管理页面会话并返回 React 入口。 */
+  app.get(["/home", "/overview", "/accounts", "/tasks", "/addresses", "/addresses/:id", "/inbox", "/guide", "/settings"], (req, res) => {
+    try {
+      verifyAdminToken(req.cookies?.workbench_admin, config, repositories);
       sendFrontend(req, res);
     } catch {
       res.redirect("/login");

@@ -39,6 +39,11 @@ export function checkAdminPassword(password, { adminPassword, adminPasswordHash,
   return adminPassword ? verifyPlainPassword(password, adminPassword) : verifyPassword(password, adminPasswordHash);
 }
 
+/** 读取生效管理员用户名：DB 覆盖优先，回退到环境变量配置。 */
+export function resolveAdminUsername(config, repositories) {
+  return String(repositories.getSetting("adminUsername") || config.adminUsername);
+}
+
 /** 将 Base64 密钥转换为固定 32 字节 AES 密钥。 */
 function decodeEncryptionKey(encodedKey) {
   const key = Buffer.from(encodedKey, "base64");
@@ -64,21 +69,21 @@ export function decryptSecret(payload, encodedKey) {
 }
 
 /** 签发管理员 JWT。 */
-export function signAdminToken(config) {
+export function signAdminToken(config, repositories) {
   return jwt.sign({ role: "admin" }, config.jwtSecret, {
     algorithm: "HS256",
-    subject: config.adminUsername,
+    subject: resolveAdminUsername(config, repositories),
     expiresIn: config.jwtExpiresIn,
     issuer: "icloud-create-workbench"
   });
 }
 
 /** 校验管理员 JWT。 */
-export function verifyAdminToken(token, config) {
+export function verifyAdminToken(token, config, repositories) {
   return jwt.verify(token, config.jwtSecret, {
     algorithms: ["HS256"],
     issuer: "icloud-create-workbench",
-    subject: config.adminUsername
+    subject: resolveAdminUsername(config, repositories)
   });
 }
 

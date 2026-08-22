@@ -1,3 +1,5 @@
+import { isPublicPath } from '@/utils/route';
+
 /** 返回开发环境代理前缀。 */
 function apiPath(path: string) {
   return `${import.meta.env.DEV ? '/proxy-default' : ''}${path}`;
@@ -24,8 +26,9 @@ export async function fetchLogin(params: Api.Auth.LoginParams) {
   return { refreshToken: '', token: 'cookie-session' } satisfies Api.Auth.LoginResponse;
 }
 
-/** 读取当前管理员并转换为 Skyroc 用户信息。 */
+/** 读取当前管理员并转换为 Skyroc 用户信息。公开页面跳过请求，避免匿名访问触发 401。 */
 export async function fetchGetUserInfo() {
+  if (isPublicPath(window.location.pathname)) return null;
   const response = await fetch(apiPath('/api/auth/me'), { credentials: 'include' });
   if (response.status === 401) return null;
   const data = await parseResponse<{ username: string }>(response);
