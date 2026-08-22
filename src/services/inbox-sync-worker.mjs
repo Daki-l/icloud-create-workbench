@@ -1,12 +1,13 @@
+import { resolveInboxSyncInterval } from "./inbox-interval.mjs";
+
 /** 创建每 CK IMAP 后台增量同步调度器。 */
 export function createInboxSyncWorker({ config, repositories, inboxService }) {
   let timer = null;
   let ticking = false;
 
-  /** 读取生效同步间隔：DB 覆盖优先（限定 10-3600），回退到环境变量配置。 */
+  /** 读取生效同步间隔（DB 覆盖优先，回退环境变量）。 */
   function resolveInterval() {
-    const override = Number(repositories.getSetting("inboxSyncIntervalSeconds"));
-    return Number.isInteger(override) && override >= 10 && override <= 3600 ? override : config.inboxSyncIntervalSeconds;
+    return resolveInboxSyncInterval(config, repositories);
   }
 
   /** 以限定并发执行当前到期的 IMAP 配置。 */

@@ -1,6 +1,7 @@
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 import { decryptSecret, encryptSecret } from "../security.mjs";
+import { resolveInboxSyncInterval } from "./inbox-interval.mjs";
 
 /** 从邮件文本中提取常见验证码。 */
 export function extractCode(text) {
@@ -50,9 +51,9 @@ export function inlineAttachmentCidImages(html, attachments) {
 export function createInboxService({ config, repositories }) {
   const activeSyncs = new Set();
 
-  /** 计算下一次后台同步时间。 */
+  /** 计算下一次后台同步时间，使用运行时可配的生效同步间隔。 */
   function nextSyncAt() {
-    return new Date(Date.now() + config.inboxSyncIntervalSeconds * 1000).toISOString();
+    return new Date(Date.now() + resolveInboxSyncInterval(config, repositories) * 1000).toISOString();
   }
 
   /** 返回不包含密码的 IMAP 配置。 */
