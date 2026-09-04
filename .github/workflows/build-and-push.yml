@@ -5,6 +5,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -58,7 +62,7 @@ jobs:
             -o BatchMode=yes \
             -o StrictHostKeyChecking=yes \
             -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            -o 'ProxyCommand=cloudflared access ssh --hostname %h' \
+            -o "ProxyCommand=cloudflared access ssh --hostname %h --id ${TUNNEL_SERVICE_TOKEN_ID} --secret ${TUNNEL_SERVICE_TOKEN_SECRET}" \
             "${SERVER_USER}@${SERVER_HOST}" 'bash -se' <<'REMOTE_SCRIPT'
             set -e
             cd /opt/icloud-create-workbench
