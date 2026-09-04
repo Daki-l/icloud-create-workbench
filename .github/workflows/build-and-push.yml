@@ -30,16 +30,40 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
+      - name: 安装 cloudflared
+        env:
+          CLOUDFLARED_VERSION: 2026.8.3
+        run: |
+          curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
+            --output /tmp/cloudflared.deb \
+            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
+          sudo dpkg --install /tmp/cloudflared.deb
+          cloudflared --version
+
+      - name: 通过 Cloudflare Access 部署到服务器
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_SSH_HOST_KEY: ${{ secrets.SERVER_SSH_HOST_KEY }}
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+        run: |
+          install --directory --mode 700 "$HOME/.ssh"
+          printf '%s\n' "$SERVER_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          printf '%s %s\n' "$SERVER_HOST" "$SERVER_SSH_HOST_KEY" > "$HOME/.ssh/known_hosts"
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o 'ProxyCommand=cloudflared access ssh --hostname %h' \
+            "${SERVER_USER}@${SERVER_HOST}" 'bash -se' <<'REMOTE_SCRIPT'
             set -e
             cd /opt/icloud-create-workbench
-            git pull
-            sudo docker compose pull
-            sudo docker compose up -d
-            sudo docker image prune -f
+            git pull --ff-only
+            docker compose pull
+            docker compose up -d --no-build
+            docker image prune -f
+          REMOTE_SCRIPT
