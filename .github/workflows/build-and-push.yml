@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: image-publish-${{ github.ref }}
+  group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,3 +33,33 @@ jobs:
           tags: ghcr.io/daki-l/icloud-create-workbench:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: 连接 Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.TAILSCALE_AUTHKEY }}
+          ping: ${{ secrets.SERVER_HOST }}
+
+      - name: 部署到 e445
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
+          SERVER_SSH_HOST_KEY: ${{ secrets.SERVER_SSH_HOST_KEY }}
+        run: |
+          install --directory --mode 700 "$HOME/.ssh"
+          printf '%s\n' "$SERVER_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
+          chmod 600 "$HOME/.ssh/deploy_key"
+          printf '%s %s\n' "$SERVER_HOST" "$SERVER_SSH_HOST_KEY" > "$HOME/.ssh/known_hosts"
+          ssh \
+            -i "$HOME/.ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            "${SERVER_USER}@${SERVER_HOST}" 'bash -se' <<'REMOTE_SCRIPT'
+            set -e
+            cd /opt/icloud-create-workbench
+            git pull --ff-only
+            docker compose pull app
+            docker compose up -d --no-build app
+          REMOTE_SCRIPT
