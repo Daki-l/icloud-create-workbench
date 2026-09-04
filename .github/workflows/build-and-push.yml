@@ -32,7 +32,7 @@ jobs:
 
       - name: 安装 cloudflared
         env:
-          CLOUDFLARED_VERSION: 2026.8.3
+          CLOUDFLARED_VERSION: 2026.5.1
         run: |
           curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
             --output /tmp/cloudflared.deb \
