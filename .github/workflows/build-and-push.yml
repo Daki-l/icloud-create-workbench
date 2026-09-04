@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: image-publish-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,41 +33,3 @@ jobs:
           tags: ghcr.io/daki-l/icloud-create-workbench:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: 安装 cloudflared
-        env:
-          CLOUDFLARED_VERSION: 2026.5.1
-        run: |
-          curl --fail --location --silent --show-error --retry 3 --retry-delay 2 \
-            --output /tmp/cloudflared.deb \
-            "https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-amd64.deb"
-          sudo dpkg --install /tmp/cloudflared.deb
-          cloudflared --version
-
-      - name: 通过 Cloudflare Access 部署到服务器
-        env:
-          SERVER_HOST: ${{ secrets.SERVER_HOST }}
-          SERVER_USER: ${{ secrets.SERVER_USER }}
-          SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}
-          SERVER_SSH_HOST_KEY: ${{ secrets.SERVER_SSH_HOST_KEY }}
-          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
-        run: |
-          install --directory --mode 700 "$HOME/.ssh"
-          printf '%s\n' "$SERVER_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/deploy_key"
-          chmod 600 "$HOME/.ssh/deploy_key"
-          printf '%s %s\n' "$SERVER_HOST" "$SERVER_SSH_HOST_KEY" > "$HOME/.ssh/known_hosts"
-          ssh \
-            -i "$HOME/.ssh/deploy_key" \
-            -o BatchMode=yes \
-            -o StrictHostKeyChecking=yes \
-            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
-            -o "ProxyCommand=cloudflared access ssh --hostname %h --id ${TUNNEL_SERVICE_TOKEN_ID} --secret ${TUNNEL_SERVICE_TOKEN_SECRET}" \
-            "${SERVER_USER}@${SERVER_HOST}" 'bash -se' <<'REMOTE_SCRIPT'
-            set -e
-            cd /opt/icloud-create-workbench
-            git pull --ff-only
-            docker compose pull
-            docker compose up -d --no-build
-            docker image prune -f
-          REMOTE_SCRIPT

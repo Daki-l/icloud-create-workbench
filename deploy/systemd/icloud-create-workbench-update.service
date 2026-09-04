@@ -1,0 +1,12 @@
+[Unit]
+Description=更新 icloud-create-workbench 容器
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/icloud-create-workbench
+ExecStart=/usr/bin/docker compose pull app
+ExecStart=/usr/bin/docker compose up -d --no-build app
+ExecStart=/usr/bin/docker image prune -f
